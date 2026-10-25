@@ -609,3 +609,12 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
   .top { gap: 12px; padding: 0 14px; }
   .tab { padding: 0 10px; }
 }
+
+/* 숫자 칸 묶음 화면의 완료 버튼: 가운데 정렬, 다 채우기 전엔 연한 회색으로 눌리지 않음 */
+.choice.form-done { justify-content: center; text-align: center; }
+.choice.form-done .c-body { align-items: center; flex: 0 1 auto; }
+.choice.form-done b { justify-content: center; }
+.choice.form-done kbd { display: none; }
+.choice.form-done:disabled { background: var(--chip); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+.choice.form-done:disabled .say { color: var(--muted); }
+.choice.form-done:disabled:active { transform: none; }

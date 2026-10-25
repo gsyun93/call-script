@@ -780,7 +780,8 @@
     }
     var key = 1, list = '', prev = '', next = '', reads = '';
     var nextDir = cur.next ? listDir(cur.next, true) : '';
-    if (cur.next && !nextDir) list += choiceBtn(key++, cur.next, esc(nextLabel(cur.next, cur)), 'primary' + (cur.form && !formOk(cur) ? ' is-locked' : ''), '', ' data-nx="1"');
+    // 숫자 칸 묶음 화면의 완료 버튼은 가운데 정렬, 다 채우기 전엔 눌리지 않게
+    if (cur.next && !nextDir) list += choiceBtn(key++, cur.next, esc(nextLabel(cur.next, cur)), 'primary' + (cur.form ? ' form-done' : ''), '', ' data-nx="1"' + (cur.form && !formOk(cur) ? ' disabled' : ''));
     var dirs = [];
     (cur.options || []).forEach(function (o, i) {
       var ins = optInputs(o);
@@ -932,7 +933,7 @@
         $$('[data-sum]', box).forEach(function (el) { el.textContent = formSumText(cur.form[Number(el.dataset.sum)]); });
         $('.fgroup[data-g="' + inp.dataset.g + '"]', box).classList.remove('is-bad');
         var nx = $('.choice.primary[data-nx]', box);
-        if (nx) nx.classList.toggle('is-locked', !formOk(cur));
+        if (nx) nx.disabled = !formOk(cur);
         updateSays();
         renderMessages();
       });
