@@ -1,7 +1,7 @@
-// 수퍼베이스 저장 (선택): 평소엔 로그인 없이 브라우저에만 저장한다.
-// 위쪽 메뉴의 '서버 저장 켜기'로 로그인하면 통화 기록, 고친 멘트, 화면 편집 내용을 서버에도 같이 저장한다.
-//   1. 로그인돼 있으면 서버 값을 브라우저 저장소로 가져온 뒤 app.js 실행, 아니면 바로 실행
-//   2. 로그인 중에 앱이 저장소에 쓰면 잠시 뒤 서버에도 올리기
+// 로그인과 수퍼베이스 저장: 로그인해야 툴이 열린다.
+// 로그인하면 통화 기록, 고친 멘트, 화면 편집 내용을 서버에도 같이 저장한다.
+//   1. 로그인돼 있으면 서버 값을 브라우저 저장소로 가져온 뒤 app.js 실행, 아니면 로그인 화면
+//   2. 앱이 저장소에 쓰면 잠시 뒤 서버에도 올리기
 (function () {
   'use strict';
 
@@ -11,6 +11,8 @@
     key: 'sb_publishable_wM5ifw-gKkVSbRG4YNAJ1w_dwjeXVyh'
   };
   var KEYS = ['records', 'edits', 'custom'];
+  // 아이디 → 수퍼베이스 로그인 계정(이메일 형식). 비밀번호는 여기 두지 않고 수퍼베이스에만 있다
+  var IDS = { '윤기성': 'yoon@call-script.example' };
   var PREFIX = 'callscript.';
 
   var me = document.currentScript;
@@ -86,45 +88,31 @@
     g.className = 'gate';
     g.innerHTML = '<form class="gate-card" novalidate>' +
       '<h1>테이블오더 통화 스크립트</h1>' +
-      '<p class="gate-sub">로그인하면 통화 기록과 고친 멘트가 서버에도 저장돼 어느 기기에서나 같이 보입니다.</p>' +
-      '<label><span>이메일</span><input type="email" name="email" autocomplete="username" required></label>' +
-      '<label><span>비밀번호</span><input type="password" name="pw" autocomplete="current-password" minlength="6" required></label>' +
+      '<label><span>아이디</span><input type="text" name="email" autocomplete="username" required></label>' +
+      '<label><span>비밀번호</span><input type="password" name="pw" autocomplete="current-password" required></label>' +
       '<p class="gate-msg"></p>' +
       '<button type="submit" class="btn">로그인</button>' +
-      '<div class="gate-alt"><button type="button" data-a="signup">처음이면 가입</button>' +
-      '<button type="button" data-a="close">닫기</button></div>' +
       '</form>';
     document.body.appendChild(g);
     var f = g.querySelector('form'), m = g.querySelector('.gate-msg');
     function say(t, bad) { m.textContent = t; m.classList.toggle('is-bad', !!bad); }
     if (msg) say(msg, true);
-    function creds() { return { email: f.email.value.trim(), password: f.pw.value }; }
+    function creds() {
+      var id = f.email.value.trim();
+      return { email: IDS[id] || id, password: f.pw.value };
+    }
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       var c = creds();
-      if (!c.email || !c.password) { say('이메일과 비밀번호를 넣어주세요', true); return; }
+      if (!c.email || !c.password) { say('아이디와 비밀번호를 넣어주세요', true); return; }
       say('로그인 중');
       client.auth.signInWithPassword(c).then(function (r) {
-        if (r.error) { say(r.error.message.indexOf('confirm') !== -1 ? '메일함에서 가입 인증 링크를 먼저 눌러주세요' : '이메일이나 비밀번호가 맞지 않습니다', true); return; }
+        if (r.error) { say('아이디나 비밀번호가 맞지 않습니다', true); return; }
         user = r.data.user;
         say('기록을 불러오는 중');
         // 이 기기 기록과 서버 기록을 합친 뒤 새로 연다
         pull().then(function () { location.reload(); }, function () { location.reload(); });
       });
-    });
-    g.addEventListener('click', function (e) {
-      var a = e.target.dataset && e.target.dataset.a;
-      if (a === 'close' || e.target === g) g.remove();
-      if (a === 'signup') {
-        var c = creds();
-        if (!c.email || c.password.length < 6) { say('이메일과 6자 이상 비밀번호를 넣고 가입을 누르세요', true); return; }
-        say('가입 중');
-        client.auth.signUp({ email: c.email, password: c.password, options: { emailRedirectTo: location.origin + location.pathname } }).then(function (r) {
-          if (r.error) { say(r.error.message, true); return; }
-          if (r.data.session) { user = r.data.user; pull().then(function () { location.reload(); }); return; }
-          say('메일함으로 인증 링크를 보냈습니다. 링크를 누른 뒤 여기서 로그인하세요.');
-        });
-      }
     });
     setTimeout(function () { f.email.focus(); }, 30);
   }
@@ -141,16 +129,11 @@
     if (!bar) return;
     var box = document.createElement('span');
     box.className = 'acct';
-    if (user) {
-      box.innerHTML = '<span class="sync">서버에 저장됨</span><button type="button" class="btn-ghost" data-a="out">로그아웃</button>';
-    } else {
-      box.innerHTML = '<button type="button" class="btn-ghost sm" data-a="in">서버 저장 켜기</button>';
-    }
+    box.innerHTML = '<span class="sync">서버에 저장됨</span><button type="button" class="btn-ghost" data-a="out">로그아웃</button>';
     bar.insertBefore(box, bar.firstChild);
     syncEl = box.querySelector('.sync');
     box.addEventListener('click', function (e) {
       var a = e.target.dataset && e.target.dataset.a;
-      if (a === 'in') gate();
       if (a === 'out') {
         if (!confirm('로그아웃할까요? 이 기기에 남은 통화 기록은 지웁니다 (서버에는 그대로 있습니다).')) return;
         client.auth.signOut().then(function () {
@@ -163,11 +146,14 @@
 
   // ---------- 시작 ----------
   try { localStorage.removeItem(PREFIX + 'localOnly'); } catch (e) { /* 예전 설정 정리 */ }
-  if (!window.supabase || !window.supabase.createClient) { loadApp(); return; }
+  if (!window.supabase || !window.supabase.createClient) {
+    document.body.insertAdjacentHTML('beforeend', '<div class="gate"><div class="gate-card"><h1>연결할 수 없습니다</h1><p class="gate-sub">인터넷 연결을 확인하고 새로고침 해주세요.</p></div></div>');
+    return;
+  }
   client = window.supabase.createClient(CFG.url, CFG.key);
   client.auth.getSession().then(function (r) {
     user = r.data.session && r.data.session.user;
     if (user) return pull().then(loadApp, loadApp);
-    loadApp();
-  }, function () { loadApp(); });
+    gate();
+  }, function () { gate('연결이 불안정합니다. 다시 시도해 주세요'); });
 })();
