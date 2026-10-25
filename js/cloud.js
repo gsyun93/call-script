@@ -89,7 +89,7 @@
     var g = document.createElement('div');
     g.className = 'gate';
     g.innerHTML = '<form class="gate-card" novalidate>' +
-      '<h1>테이블오더 통화 스크립트</h1>' +
+      '<h1>세일즈 마스터</h1>' +
       '<label><span>아이디</span><input type="text" name="email" autocomplete="username" required></label>' +
       '<label><span>비밀번호</span><input type="password" name="pw" autocomplete="current-password" required></label>' +
       '<p class="gate-msg"></p>' +
