@@ -589,3 +589,9 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 .acct { display: flex; align-items: center; gap: 8px; margin-right: 6px; }
 .sync { font-size: 12px; color: var(--s-hi); white-space: nowrap; }
 .sync.is-bad { color: var(--s-mid); }
+
+@media (max-width: 900px) {
+  .top-act { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; min-width: 0; }
+  .me { display: none; }
+  .acct { margin-right: 0; }
+}

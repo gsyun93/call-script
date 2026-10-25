@@ -778,7 +778,7 @@
       if (!r || r.node.kind !== 'pick') return '';
       return isNext && t.indexOf('step:') !== 0 ? 'prev' : 'next';
     }
-    var key = 1, list = '', prev = '', next = '';
+    var key = 1, list = '', prev = '', next = '', reads = '';
     var nextDir = cur.next ? listDir(cur.next, true) : '';
     if (cur.next && !nextDir) list += choiceBtn(key++, cur.next, esc(nextLabel(cur.next, cur)), 'primary' + (cur.form && !formOk(cur) ? ' is-locked' : ''), '', ' data-nx="1"');
     var dirs = [];
@@ -798,15 +798,24 @@
       }
       var d = listDir(o.to);
       if (d) { dirs.push({ dir: d, to: o.to, label: o.label, extra: ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : '') }); return; }
+      // 읽기 전용 화면: 고객 답별 안내를 누르지 않는 카드로 (편집 중에는 버튼으로 보여서 고칠 수 있게)
+      if (cur.readOnly && !state.editMode) {
+        var sy = sayOf(o.to);
+        reads += '<div class="ref-card"' + (sy && sy.key ? ' data-edit="' + sy.key + '" title="꾹 누르면 수정"' : '') + '><b>' + esc(o.label) + '</b>' + sayHtml(sy) + '</div>';
+        return;
+      }
       var isObj = o.to.indexOf('obj:') === 0;
       var cls = (isObj ? 'is-obj' : '') + (wentFrom(p, curId, o.to) ? ' is-done' : '');
       list += choiceBtn(key++, o.to, esc(o.label), cls, isObj ? '<em class="obj">반론 답변</em>' : '', ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : ''));
     });
     if (nextDir) dirs.push({ dir: nextDir, to: cur.next, label: nextLabel(cur.next, cur), extra: ' data-nx="1" data-enter="1"' });
+    // 번호는 왼쪽(←)부터
+    dirs.sort(function (a, b) { return (a.dir === 'prev' ? 0 : 1) - (b.dir === 'prev' ? 0 : 1); });
     dirs.forEach(function (d) {
       var b = choiceBtn(key++, d.to, esc(d.label), 'dir dir-' + d.dir, '', d.extra);
       if (d.dir === 'prev') prev += b; else next += b;
     });
+    if (reads) html += '<div class="refs top">' + reads + '</div>';
     html += '<div class="choices' + (key <= 4 ? ' few' : '') + '">' + list;
     if (state.editMode) html += '<button type="button" class="add-btn" id="addOption">+ 버튼 추가</button>';
     html += '</div>';
