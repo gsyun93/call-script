@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>테이블오더 통화 스크립트</title>
+<link rel="stylesheet" href="css/style.css?v=24">
+</head>
+<body>
+
+<div class="top-zone" aria-hidden="true"></div>
+<header class="top">
+  <div class="brand">
+    <strong>테이블오더 통화 스크립트</strong>
+    <span class="muted" id="baseDate"></span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab is-on" data-tab="script">스크립트</button>
+    <button class="tab" data-tab="price">금액표</button>
+    <button class="tab" data-tab="msg">카톡 문구</button>
+    <button class="tab" data-tab="log">통화 기록 <span class="count" id="logCount"></span></button>
+  </nav>
+  <div class="top-act">
+    <span class="me" id="me"></span>
+    <button class="btn-ghost" id="newCall" type="button">새 통화</button>
+    <button class="btn" id="openRecord" type="button">결과 기록</button>
+  </div>
+</header>
+
+<main>
+  <!-- 스크립트 -->
+  <section class="panel is-on" data-panel="script">
+    <div class="script-layout">
+      <div class="script-col">
+        <article class="script" id="script"></article>
+      </div>
+      <aside class="obj">
+        <div class="obj-head">
+          <h2>반론 대응</h2>
+          <input id="objSearch" type="search" placeholder="고객이 한 말로 검색 (예: 비싸, 위약금)">
+        </div>
+        <div id="objList"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 금액표 -->
+  <section class="panel" data-panel="price">
+    <div class="wrap">
+      <p class="lead">2026-10 통화 기준이며 모든 금액은 부가세 포함입니다. 같은 항목에 금액이 여러 개였던 경우 가장 최근 통화 금액을 적었습니다. 프로모션은 매달 바뀌니 최종 금액은 견적서로 확인하세요. 칸을 눌러 바로 고칠 수 있고, 위쪽 단가를 바꾸면 스크립트 금액과 견적 계산에도 반영됩니다.</p>
+      <div id="priceTables"></div>
+    </div>
+  </section>
+
+  <!-- 카톡 문구 -->
+  <section class="panel" data-panel="msg">
+    <div class="wrap">
+      <p class="lead">스크립트에서 입력한 매장명, 대수가 자동으로 들어갑니다. 보내기 전에 내용을 한 번 확인하세요.</p>
+      <div class="msgs" id="msgs"></div>
+    </div>
+  </section>
+
+  <!-- 통화 기록 -->
+  <section class="panel" data-panel="log">
+    <div class="wrap">
+      <div class="log-tools">
+        <label>감도
+          <select id="fSens"><option value="">전체</option><option>상</option><option>중</option><option>하</option></select>
+        </label>
+        <label>보기
+          <select id="fView">
+            <option value="">전체</option>
+            <option value="due">재컨택 오늘까지</option>
+            <option value="week">재컨택 7일 이내</option>
+          </select>
+        </label>
+        <input id="fText" type="search" placeholder="매장명, 메모 검색">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="exportCsv" type="button">CSV 내보내기</button>
+        <button class="btn-ghost" id="exportJson" type="button">백업 저장</button>
+        <label class="btn-ghost file-btn">백업 불러오기<input id="importJson" type="file" accept=".json,application/json"></label>
+      </div>
+      <p class="hint">기록은 이 컴퓨터의 브라우저에만 저장됩니다. 파이프드라이브에는 보내지 않습니다. 브라우저 데이터를 지우면 함께 지워지니 주기적으로 백업 저장을 해두세요.</p>
+      <div class="table-wrap">
+        <table class="log">
+          <thead>
+            <tr><th>일시</th><th>매장</th><th>단계</th><th>감도</th><th>이유</th><th>다음 행동</th><th>재컨택</th><th>메모</th><th></th></tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="logEmpty">아직 기록이 없습니다. 통화가 끝나면 위쪽의 결과 기록 버튼으로 남겨주세요.</p>
+    </div>
+  </section>
+</main>
+
+<!-- 결과 기록 -->
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-bg" data-close></div>
+  <form class="drawer-body" id="recordForm" autocomplete="off">
+    <div class="drawer-head">
+      <h2 id="drawerTitle">통화 결과 기록</h2>
+      <button type="button" class="x" data-close aria-label="닫기">닫기</button>
+    </div>
+
+    <div class="row two">
+      <label>매장명<input name="store" type="text" required></label>
+      <label>통화 단계<select name="stage" id="rStage"></select></label>
+    </div>
+
+    <fieldset class="sens">
+      <legend>고객감도</legend>
+      <div class="sens-opts" id="sensOpts"></div>
+      <p class="sens-desc" id="sensDesc"></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>이유 <span class="muted">여러 개 선택 가능</span></legend>
+      <div class="chips" id="reasonChips"><p class="muted">감도를 먼저 고르세요.</p></div>
+      <input name="reasonText" type="text" placeholder="직접 입력 (선택)">
+    </fieldset>
+
+    <div class="row two">
+      <label>다음 행동<select name="next" id="rNext"></select></label>
+      <label>재컨택일<input name="recallDate" type="date"></label>
+    </div>
+
+    <label>메모<textarea name="memo" rows="4" placeholder="견적 조건, 비교 업체, 결정권자 등. 전화번호 같은 개인정보는 적지 마세요."></textarea></label>
+
+    <div class="drawer-foot">
+      <span class="muted">Ctrl + Enter 로 저장</span>
+      <button type="button" class="btn-ghost" data-close>취소</button>
+      <button type="submit" class="btn">저장</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<div class="modal" id="editModal">
+  <div class="modal-card" role="dialog" aria-label="멘트 수정">
+    <h2>멘트 수정</h2>
+    <textarea rows="5"></textarea>
+    <p class="modal-help">{store} 매장명, {n} 대수, {open} 오픈일, {name} 내 이름은 그대로 두면 값이 들어갑니다.</p>
+    <div class="modal-act">
+      <button type="button" class="btn-ghost" data-e="reset">원래 멘트로</button>
+      <button type="button" class="btn-ghost" data-e="cancel">취소</button>
+      <button type="button" class="btn" data-e="save">저장</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js?v=24"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/cloud.js?v=24"></script>
+</body>
+</html>

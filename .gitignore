@@ -1,0 +1,4 @@
+raw/
+.env
+*.zip
+.claude/
