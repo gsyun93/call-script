@@ -10,6 +10,8 @@
     // 공개용 키 (브라우저에 넣어도 되는 키, 데이터는 로그인한 본인 것만 보이게 막혀 있음)
     key: 'sb_publishable_wM5ifw-gKkVSbRG4YNAJ1w_dwjeXVyh'
   };
+  // 잠시 로그인 없이 쓰려면 false (그동안 기록은 이 브라우저에만 저장된다)
+  var REQUIRE_LOGIN = false;
   var KEYS = ['records', 'edits', 'custom'];
   // 아이디 → 수퍼베이스 로그인 계정(이메일 형식). 비밀번호는 여기 두지 않고 수퍼베이스에만 있다
   var IDS = { '윤기성': 'yoon@call-script.example' };
@@ -126,7 +128,7 @@
   }
   function addAccountBar() {
     var bar = document.querySelector('.top-act');
-    if (!bar) return;
+    if (!bar || !user) return;
     var box = document.createElement('span');
     box.className = 'acct';
     box.innerHTML = '<span class="sync">서버에 저장됨</span><button type="button" class="btn-ghost" data-a="out">로그아웃</button>';
@@ -147,6 +149,7 @@
   // ---------- 시작 ----------
   try { localStorage.removeItem(PREFIX + 'localOnly'); } catch (e) { /* 예전 설정 정리 */ }
   if (!window.supabase || !window.supabase.createClient) {
+    if (!REQUIRE_LOGIN) { loadApp(); return; }
     document.body.insertAdjacentHTML('beforeend', '<div class="gate"><div class="gate-card"><h1>연결할 수 없습니다</h1><p class="gate-sub">인터넷 연결을 확인하고 새로고침 해주세요.</p></div></div>');
     return;
   }
@@ -154,6 +157,7 @@
   client.auth.getSession().then(function (r) {
     user = r.data.session && r.data.session.user;
     if (user) return pull().then(loadApp, loadApp);
+    if (!REQUIRE_LOGIN) return loadApp();
     gate();
-  }, function () { gate('연결이 불안정합니다. 다시 시도해 주세요'); });
+  }, function () { if (REQUIRE_LOGIN) gate('연결이 불안정합니다. 다시 시도해 주세요'); else loadApp(); });
 })();
