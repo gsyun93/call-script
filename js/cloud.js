@@ -11,10 +11,8 @@
     key: 'sb_publishable_wM5ifw-gKkVSbRG4YNAJ1w_dwjeXVyh'
   };
   // 잠시 로그인 없이 쓰려면 false (그동안 기록은 이 브라우저에만 저장된다)
-  var REQUIRE_LOGIN = false;
+  var REQUIRE_LOGIN = true;
   var KEYS = ['records', 'edits', 'custom'];
-  // 아이디 → 수퍼베이스 로그인 계정(이메일 형식). 비밀번호는 여기 두지 않고 수퍼베이스에만 있다
-  var IDS = { '윤기성': 'yoon@call-script.example' };
   var PREFIX = 'callscript.';
 
   var me = document.currentScript;
@@ -99,16 +97,22 @@
     var f = g.querySelector('form'), m = g.querySelector('.gate-msg');
     function say(t, bad) { m.textContent = t; m.classList.toggle('is-bad', !!bad); }
     if (msg) say(msg, true);
+    // 아이디는 서버(login_email)에서 로그인 이메일로 바꾼다. 이메일을 직접 넣어도 된다
     function creds() {
       var id = f.email.value.trim();
-      return { email: IDS[id] || id, password: f.pw.value };
+      if (id.indexOf('@') !== -1) return Promise.resolve({ email: id, password: f.pw.value });
+      return client.rpc('login_email', { p_id: id }).then(function (r) {
+        return { email: (r.data || ''), password: f.pw.value };
+      });
     }
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      var c = creds();
-      if (!c.email || !c.password) { say('아이디와 비밀번호를 넣어주세요', true); return; }
+      if (!f.email.value.trim() || !f.pw.value) { say('아이디와 비밀번호를 넣어주세요', true); return; }
       say('로그인 중');
-      client.auth.signInWithPassword(c).then(function (r) {
+      creds().then(function (c) {
+        if (!c.email) return { error: true };
+        return client.auth.signInWithPassword(c);
+      }).then(function (r) {
         if (r.error) { say('아이디나 비밀번호가 맞지 않습니다', true); return; }
         user = r.data.user;
         say('기록을 불러오는 중');
