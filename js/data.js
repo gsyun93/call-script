@@ -365,21 +365,15 @@ window.TOOL_DATA = {
         },
         q2: {
           kind: 'say',
-          text: '{n}대 하시면 {free}대 금액은 빼드려서 {paid}대 금액만 받을게요. {posLine}정리하면 테이블오더 {n}대에 포스기, 카드 단말기, 주방 프린터까지 해서 월 {total}원이고 36개월 약정이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요.',
-          summary: true,
-          next: 'q_decider',
-          nextLabel: '괜찮대요',
-          options: [
-            { label: '비싸대요', to: 'step:close#cr_price' },
-            { label: '생각해본대요', to: 'step:close#cr_think' },
-            { label: '위약금 물어봐요', to: 'step:close#cr_penalty' },
-            { label: '리뷰·홍보로 한 번 더', to: 'step:close#cr_review' }
-          ]
+          text: '{n}대 하시면 {free}대 금액은 빼드려서 {paid}대 금액만 받을게요. {posLine}정리하면 테이블오더 {n}대에 포스기, 카드 단말기, 주방 프린터까지 해서 월 {total}원이고 36개월 약정이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요. 혹시 결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
+          pass: true,
+          next: 'q_decider'
         },
         // 결정권자 확인: 상의해야 하면 재통화 날짜를 잡는다
         q_decider: {
           label: '결정권자',
           kind: 'ask',
+          summary: true,
           slots: [{ key: 'decider', label: '결정권자' }],
           text: '결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
           options: [
@@ -449,30 +443,6 @@ window.TOOL_DATA = {
           label: '재통화 예정일',
           kind: 'say',
           text: '그러면 견적서 같이 보시고, 제가 {date} {time} 정도에 다시 연락드리겠습니다. 결정하시는 분이랑 같이 통화하셔도 좋아요.',
-          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
-        },
-        cr_price: {
-          label: '재통화 예정일',
-          kind: 'say',
-          text: '금액은 포스기, 카드 단말기, 설치비, 3년 AS까지 다 들어간 거라 받으신 다른 견적이랑 포함 항목까지 같이 비교해보시면 차이가 보이실 거예요. 견적서 카톡으로 보내드리고 {date} {time}쯤 다시 연락드릴게요.',
-          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
-        },
-        cr_think: {
-          label: '재통화 예정일',
-          kind: 'say',
-          text: '네 천천히 보셔도 괜찮아요. 견적서 보내드릴 테니 보시고 고민되는 부분 있으시면 그때 편하게 말씀해 주세요. {date} {time}쯤 다시 연락드릴게요.',
-          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
-        },
-        cr_penalty: {
-          label: '재통화 예정일',
-          kind: 'say',
-          text: '중간에 해지하셔도 남은 개월 수만큼 할인된 월 금액으로만 계산되고, 혜택으로 드린 건 청구하지 않아요. 견적서에 같이 적어서 보내드리고 {date} {time}쯤 다시 연락드릴게요.',
-          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
-        },
-        cr_review: {
-          label: '재통화 예정일',
-          kind: 'say',
-          text: '저희만 네이버랑 당근 리뷰가 둘 다 연동돼서 손님이 결제하시면 바로 리뷰 쓰기로 이어지고, 한가한 날엔 단골 손님들한테 쿠폰 문자도 보내실 수 있어요. 견적서랑 같이 소개서 보내드리고 {date} {time}쯤 다시 연락드릴게요.',
           fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
         },
       }

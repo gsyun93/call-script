@@ -421,6 +421,8 @@
   }
   // 목록으로 돌아가는 버튼 하나만 남는 멘트 화면인지
   function passThrough(n) {
+    // pass: 멘트는 앞 화면 버튼에서 읽고 화면은 건너뛴다
+    if (n && n.pass && n.next) return true;
     if (!n || n.kind !== 'say' || (n.options && n.options.length) || n.fields || n.calc || !n.next) return false;
     var r = resolve(n.next);
     return !!(r && r.node.kind === 'pick');
