@@ -26,7 +26,8 @@
     paths: store.get('paths', {}),
     answers: store.get('answers', {}),
     edits: store.get('edits', {}),
-    hist: store.get('hist', []),
+    // 이전 버튼용: 지나온 화면들 (예전 형식인 단계 이름만 쌓인 값은 버린다)
+    hist: store.get('hist', []).filter(function (h) { return h && h.step && h.paths; }),
     editing: null
   };
 
@@ -419,14 +420,22 @@
   // 이동한 화면이 건너뛸 화면이거나 다 채워진 목록이면 바로 그 다음으로
   function afterMove() {
     var st = curStep(), pp = stepPath(st), n = st.nodes[pp[pp.length - 1]];
-    if (passThrough(n) && !state.editMode) { go(n.next); return; }
-    if (n && n.kind === 'pick' && n.autoNext && n.next && !missingSlots(st, n).length) { go(n.next); return; }
+    if (passThrough(n) && !state.editMode) { go(n.next, true); return; }
+    if (n && n.kind === 'pick' && n.autoNext && n.next && !missingSlots(st, n).length) { go(n.next, true); return; }
     showScene();
   }
 
+  // 지금 보고 있는 화면(단계와 지나온 길)을 쌓아둔다. 이전 버튼은 이걸 하나씩 꺼내 바로 앞 화면으로 간다
+  function remember() {
+    state.hist.push({ step: state.step, paths: JSON.parse(JSON.stringify(state.paths)) });
+    if (state.hist.length > 100) state.hist.shift();
+  }
+
   // 노드 이동: 같은 단계 노드, 'step:id', 'step:id#노드', 'obj:id', 'end'
-  function go(target) {
+  // auto: 건너뛰는 화면에서 저절로 넘어가는 이동 (화면을 보여준 적이 없으니 쌓지 않는다)
+  function go(target, auto) {
     if (target === 'end') { openDrawer(); return; }
+    if (!auto) remember();
     if (target.indexOf('obj:') === 0) {
       var o = objOf(target);
       if (!o) return;
@@ -444,8 +453,6 @@
         var tp = stepPath(ts);
         if (tp[tp.length - 1] !== parts[1]) tp.push(parts[1]);
       }
-      // 이전 버튼으로 돌아올 수 있게 지나온 단계를 쌓아둔다
-      if (parts[0] !== state.step) state.hist.push(state.step);
       savePaths();
       setStep(parts[0]);
       afterMove();
@@ -461,22 +468,16 @@
   }
 
   function canBack() {
-    return stepPath(curStep()).length > 1 || state.hist.length > 0;
+    return state.hist.length > 0;
   }
 
-  // 이전: 같은 단계 안에서 한 칸 뒤로, 단계 처음이면 지나온 단계로
+  // 이전: 단계가 바뀌었든 아니든 바로 앞에 보던 화면으로
   function back() {
-    var s = curStep(), p = stepPath(s);
-    if (p.length > 1) {
-      p.pop();
-      // 건너뛴 멘트 화면으로는 돌아가지 않는다
-      while (p.length > 1 && passThrough(s.nodes[p[p.length - 1]]) && !state.editMode) p.pop();
-    } else if (state.hist.length) {
-      setStep(state.hist.pop());
-    } else {
-      return;
-    }
+    if (!state.hist.length) return;
+    var h = state.hist.pop();
+    state.paths = h.paths;
     savePaths();
+    setStep(h.step);
     showScene(true);
   }
 
