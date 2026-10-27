@@ -830,7 +830,10 @@
       }
       var isObj = o.to.indexOf('obj:') === 0;
       var cls = (isObj ? 'is-obj' : '') + (wentFrom(p, curId, o.to) ? ' is-done' : '');
-      list += choiceBtn(key++, o.to, esc(o.label), cls, isObj ? '<em class="obj">반론 답변</em>' : '', ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : ''));
+      var cb = choiceBtn(key++, o.to, esc(o.label), cls, isObj ? '<em class="obj">반론 답변</em>' : '', ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : ''));
+      // then: 멘트는 to 화면 것을 보여주고, 누르면 then으로 간다 (예: 바로 결과 기록)
+      if (o.then) cb = cb.replace('data-go="' + esc(o.to) + '"', 'data-go="' + esc(o.then) + '"');
+      list += cb;
     });
     if (nextDir) dirs.push({ dir: nextDir, to: cur.next, label: nextLabel(cur.next, cur), extra: ' data-nx="1" data-enter="1"' });
     // 번호는 왼쪽(←)부터

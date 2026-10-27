@@ -377,9 +377,11 @@ window.TOOL_DATA = {
           summary: true,
           slots: [{ key: 'decider', label: '결정권자' }],
           text: '결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
+          // 이 화면에서 재통화 날짜까지 넣고, 답을 누르면 바로 결과 기록
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }],
           options: [
-            { label: '본인이 결정한대요', to: 'step:close', set: { decider: '본인' } },
-            { label: '배우자·본사랑 상의한대요', to: 'step:close#cr_decider', set: { decider: '배우자·본사' } }
+            { label: '본인이 결정한대요', to: 'step:close', then: 'end', set: { decider: '본인' } },
+            { label: '배우자·본사랑 상의한대요', to: 'step:close#cr_decider', then: 'end', set: { decider: '배우자·본사' } }
           ]
         }
       }
