@@ -19,15 +19,19 @@
     }
   };
 
+  // 페이지를 열 때마다 새 통화로 시작한다 (저장 안 한 입력값은 남기지 않음)
+  ['step', 'vars', 'paths', 'answers', 'hist'].forEach(function (k) {
+    try { localStorage.removeItem('callscript.' + k); } catch (e) { /* 무시 */ }
+  });
   var state = {
-    step: store.get('step', D.steps[0].id),
-    vars: store.get('vars', {}),
+    step: D.steps[0].id,
+    vars: {},
     records: store.get('records', []),
-    paths: store.get('paths', {}),
-    answers: store.get('answers', {}),
+    paths: {},
+    answers: {},
     edits: store.get('edits', {}),
-    // 이전 버튼용: 지나온 화면들 (예전 형식인 단계 이름만 쌓인 값은 버린다)
-    hist: store.get('hist', []).filter(function (h) { return h && h.step && h.paths; }),
+    // 이전 버튼용: 지나온 화면들
+    hist: [],
     editing: null
   };
 
