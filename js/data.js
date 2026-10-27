@@ -250,7 +250,8 @@ window.TOOL_DATA = {
           options: [
             { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능' } },
             { label: '약정이 남았대요', to: 'h_info', set: { posNow: '약정 남음' } },
-            { label: '연동 안 되는 포스 / 본사 지정', to: 'h_info', set: { posNow: '연동 확인 필요' } }
+            { label: '연동 안 되는 포스 / 본사 지정', to: 'h_info', set: { posNow: '연동 확인 필요' },
+              say: '오케이포스, 이지포스, 유니온포스, 포스마스터는 연동돼요. KCP 체리포스는 연동이 안 돼서 포스를 바꾸셔야 해요. 프랜차이즈 본사 지정 포스는 바꿀 수 없어서 주문만 받는 용도로 쓰셔야 해요.' }
           ]
         },
         n4_free: {
