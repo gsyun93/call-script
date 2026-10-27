@@ -274,24 +274,29 @@
     if (id === 'log') renderLog();
   }
 
+  // 새 통화: 입력값, 답변, 지나온 화면을 다 비우고 첫 화면으로
+  function resetCall() {
+    state.vars = {};
+    state.paths = {};
+    state.answers = {};
+    state.hist = [];
+    store.set('vars', state.vars);
+    store.set('answers', state.answers);
+    savePaths();
+    openObj = {};
+    $('#objSearch').value = '';
+    showTab('script');
+    setStep(D.steps[0].id);
+    showScene(true);
+    renderObjections();
+    renderMessages();
+  }
+
   function bindTop() {
     $('#newCall').addEventListener('click', function () {
       var started = Object.keys(state.vars).length || Object.keys(state.answers).length;
       if (started && !confirm('지금 통화 내용을 지우고 새 통화를 시작할까요?')) return;
-      state.vars = {};
-      state.paths = {};
-      state.answers = {};
-      state.hist = [];
-      store.set('vars', state.vars);
-      store.set('answers', state.answers);
-      savePaths();
-      openObj = {};
-      $('#objSearch').value = '';
-      showTab('script');
-      setStep(D.steps[0].id);
-      showScene(true);
-      renderObjections();
-      renderMessages();
+      resetCall();
     });
     $('#openRecord').addEventListener('click', function () { openDrawer(); });
   }
@@ -1504,6 +1509,7 @@
         recallDate: f.recallDate.value,
         memo: f.memo.value.trim()
       };
+      var isNew = !state.editing;
       if (state.editing) {
         var old = state.records.filter(function (r) { return r.id === state.editing; })[0];
         if (old) { rec.ts = old.ts; rec.source = old.source || ''; }
@@ -1513,6 +1519,8 @@
       }
       if (saveRecords()) {
         closeDrawer();
+        // 이번 통화를 기록했으면 다음 통화를 위해 입력칸을 비운다 (지난 기록 수정은 그대로)
+        if (isNew) resetCall();
         renderLog();
         toast('기록했습니다');
       }
