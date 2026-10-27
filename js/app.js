@@ -1280,6 +1280,15 @@
     return true;
   }
 
+  // 결과 기록 매장명: 매장명이 있으면 매장명(지역), 없으면 지역·업종으로 만든다
+  function autoStoreName() {
+    var v = state.vars;
+    if (v.store) return v.store + (v.region ? ' (' + v.region + ')' : '');
+    var name = [v.region, v.biz].filter(Boolean).join(' ');
+    if (name && v.status === '오픈 준비 중') name += ' 오픈 준비';
+    return name || v.statusNote || '';
+  }
+
   // 통화 중 받은 정보와 답변을 결과 기록 메모용 문장으로
   function answersMemo() {
     var v = state.vars, lines = [];
@@ -1473,7 +1482,7 @@
     fillSelect($('#rStage'), D.callStages, rec ? rec.stage : defStage);
     fillSelect($('#rNext'), D.nextActions, rec ? rec.next : D.nextActions[0]);
 
-    f.store.value = rec ? rec.store : (state.vars.store || '');
+    f.store.value = rec ? rec.store : autoStoreName();
     f.recallDate.value = rec ? (rec.recallDate || '') : (state.vars.date || '');
     f.memo.value = rec ? (rec.memo || '') : answersMemo();
     f.reasonText.value = rec ? (rec.reasonText || '') : '';
