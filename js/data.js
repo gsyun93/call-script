@@ -136,7 +136,7 @@ window.TOOL_DATA = {
         h_info: {
           label: '견적 정보 확인',
           kind: 'pick',
-          choices: ['n5', 'n3', 'n2', 'n1', 'n4', 'n4_new', 'n6', 'n7'],
+          choices: ['n5', 'n3', 'n2', 'n1', 'n4', 'n4_new', 'n6'],
           next: 'step:quote',
           nextLabel: '견적 안내하기',
           needSlots: true,
@@ -155,12 +155,12 @@ window.TOOL_DATA = {
         },
         n5_have: {
           kind: 'say',
-          text: '약정은 언제쯤 끝나세요? 인터넷 요금은 어디서 하시든 똑같은데, 저희 쪽으로 결합하시면 포스기랑 카드 단말기 세트가 무상으로 들어가요. 3년이면 130만 원 넘는 금액이라, 약정 끝나는 시점 맞춰서 옮기시는 대표님들 많아요. 남은 기간 알려주시면 통신 담당자가 따져보고 따로 연락드릴게요.',
+          text: '약정은 언제쯤 끝나세요? 인터넷 요금은 어디서 하시든 똑같은데, 저희랑 결합하시면 포스기랑 카드 단말기가 무상이에요. 남은 기간 알려주시면 통신 담당자가 따로 연락드릴게요.',
           next: 'h_info'
         },
         n5_none: {
           kind: 'say',
-          text: '그럼 인터넷이랑 CCTV는 저희 통해서 같이 하시는 게 제일 이득이에요. 요금은 어디서 하시든 똑같은데, 저희랑 결합하시면 포스기랑 카드 단말기 세트 월 {posPrice}원이 무상으로 들어가거든요. 설치 날짜도 테이블오더랑 한 번에 맞춰드릴게요.',
+          text: '그럼 인터넷이랑 CCTV는 저희랑 같이 하시는 게 제일 이득이에요. 요금은 똑같은데 포스기랑 카드 단말기가 무상으로 들어가고, 설치도 한 번에 맞춰드려요.',
           next: 'h_info'
         },
         n3: {
@@ -191,7 +191,7 @@ window.TOOL_DATA = {
         },
         n3_done: {
           kind: 'say',
-          text: '{powerLine}{standLine}',
+          text: '',
           next: 'h_info'
         },
         n3_batt: {
@@ -222,12 +222,12 @@ window.TOOL_DATA = {
         },
         n2_post: {
           kind: 'say',
-          text: '그럼 후불형이 맞아요. 드시면서 추가 주문하시고 나가실 때 카운터에서 한 번에 계산하시면 돼요. 대당 월 {postPrice}원이에요. {printerLine}',
+          text: '그럼 후불형이 맞아요. 드시면서 추가 주문하시고 나가실 때 카운터에서 한 번에 계산하시면 돼요.',
           next: 'h_info'
         },
         n2_pre: {
           kind: 'say',
-          text: '그럼 선불형이 맞아요. 자리에서 결제까지 끝나서 카운터에 계산 줄이 안 생겨요. 대당 월 {prePrice}원이에요. {printerLine}',
+          text: '그럼 선불형이 맞아요. 자리에서 결제까지 끝나서 카운터에 계산 줄이 안 생겨요.',
           next: 'h_info'
         },
         n1: {
@@ -298,23 +298,6 @@ window.TOOL_DATA = {
           text: '잘 연락 주셨어요. 저희가 포스까지 같이 하는 유일한 테이블오더라 비교해보셔도 조건은 자신 있어요. 견적서 받아보시고 다른 곳이랑 비교하실 때 궁금한 거 있으시면 편하게 물어봐 주세요.',
           next: 'h_info'
         },
-        n7: {
-          label: '결정권자',
-          kind: 'ask',
-          slots: [{ key: 'decider', label: '결정권자' }],
-          text: '결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
-          next: 'h_info',
-          options: [
-            { label: '본인이 결정한대요', to: 'n7_self', set: { decider: '본인' } },
-            { label: '배우자·본사가 결정한대요', to: 'h_info', set: { decider: '배우자·본사' } }
-          ]
-        },
-        n7_self: {
-          kind: 'say',
-          text: '그럼 오늘 말씀 나눈 걸로 대표님 매장에 딱 맞춰서 견적 바로 정리해드릴게요.',
-          next: 'h_info'
-        },
-
         // 강점: 니즈 파악에서 고객 답에 맞춰 넘어온다
         d_one: {
           label: '포스까지 한 회사',
@@ -384,13 +367,24 @@ window.TOOL_DATA = {
           kind: 'say',
           text: '{n}대 하시면 {free}대 금액은 빼드려서 {paid}대 금액만 받을게요. {posLine}정리하면 테이블오더 {n}대에 포스기, 카드 단말기, 주방 프린터까지 해서 월 {total}원이고 36개월 약정이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요.',
           summary: true,
-          next: 'step:close',
+          next: 'q_decider',
           nextLabel: '괜찮대요',
           options: [
             { label: '비싸대요', to: 'step:close#cr_price' },
             { label: '생각해본대요', to: 'step:close#cr_think' },
             { label: '위약금 물어봐요', to: 'step:close#cr_penalty' },
             { label: '리뷰·홍보로 한 번 더', to: 'step:close#cr_review' }
+          ]
+        },
+        // 결정권자 확인: 상의해야 하면 재통화 날짜를 잡는다
+        q_decider: {
+          label: '결정권자',
+          kind: 'ask',
+          slots: [{ key: 'decider', label: '결정권자' }],
+          text: '결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
+          options: [
+            { label: '본인이 결정한대요', to: 'step:close', set: { decider: '본인' } },
+            { label: '배우자·본사랑 상의한대요', to: 'step:close#cr_decider', set: { decider: '배우자·본사' } }
           ]
         }
       }
@@ -449,6 +443,12 @@ window.TOOL_DATA = {
           label: '재통화 예정일',
           kind: 'say',
           text: '그럼 제가 견적서랑 명함, 소개서 카톡으로 바로 보내드리고 {date} {time}에 다시 연락드릴게요.',
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
+        },
+        cr_decider: {
+          label: '재통화 예정일',
+          kind: 'say',
+          text: '그러면 견적서 같이 보시고, 제가 {date} {time} 정도에 다시 연락드리겠습니다. 결정하시는 분이랑 같이 통화하셔도 좋아요.',
           fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
         },
         cr_price: {
