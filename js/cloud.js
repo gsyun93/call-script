@@ -11,7 +11,7 @@
     key: 'sb_publishable_wM5ifw-gKkVSbRG4YNAJ1w_dwjeXVyh'
   };
   // 잠시 로그인 없이 쓰려면 false (그동안 기록은 이 브라우저에만 저장된다)
-  var REQUIRE_LOGIN = true;
+  var REQUIRE_LOGIN = false;
   var KEYS = ['records', 'edits', 'custom'];
   var PREFIX = 'callscript.';
 
