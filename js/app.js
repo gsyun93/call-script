@@ -221,7 +221,7 @@
       time: fmtKoTime(v.time)
     };
   }
-  var varLabels = { name: '내 이름', store: '매장명', source: '유입 경로', n: '대수', free: '무상 대수', paid: '유료 대수', table: '테이블오더 월 금액', unit: '대당 금액', total: '월 합계', open: '오픈일', date: '날짜', time: '시간' };
+  var varLabels = { name: '내 이름', store: '매장명', region: '지역', source: '유입 경로', n: '대수', free: '무상 대수', paid: '유료 대수', table: '테이블오더 월 금액', unit: '대당 금액', total: '월 합계', open: '오픈일', date: '날짜', time: '시간' };
   // 비어 있으면 자리표시 없이 그냥 빼는 값
   var optionalVars = { benefits: true, posLine: true, powerLine: true, standLine: true, printerLine: true };
 
@@ -638,7 +638,7 @@
   function renderSummary() {
     var v = state.vars, c = quoteCalc();
     var rows = [
-      ['매장', [v.store, v.status, v.biz].filter(Boolean).join(' · ')],
+      ['매장', [v.store, v.region, v.status, v.biz].filter(Boolean).join(' · ')],
       ['주문 방식', v.order],
       ['테이블오더', c.units ? c.units + '대' + (v.power ? ' (' + v.power + ')' : '') : ''],
       ['거치대', v.stand],
@@ -1259,7 +1259,7 @@
   function answersMemo() {
     var v = state.vars, lines = [];
     if (v.status) {
-      var st = [v.status, v.biz, v.statusNote].filter(Boolean).join(', ');
+      var st = [v.status, v.region, v.biz, v.statusNote].filter(Boolean).join(', ');
       lines.push('매장 상황: ' + st);
     }
     if (v.installDate) lines.push('설치 희망일: ' + fmtKoDate(v.installDate));

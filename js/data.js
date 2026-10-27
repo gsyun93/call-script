@@ -76,8 +76,8 @@ window.TOOL_DATA = {
           memo: false,
           text: '매장은 지금 운영 중이세요, 아니면 오픈 준비 중이세요?',
           options: [
-            { label: '운영 중', input: { key: 'store', placeholder: '매장명' }, set: { status: '운영 중' }, to: 'step:talk' },
-            { label: '오픈 준비 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk' },
+            { label: '운영 중', inputs: [{ key: 'store', placeholder: '매장명' }, { key: 'region', placeholder: '지역' }], set: { status: '운영 중' }, to: 'step:talk' },
+            { label: '오픈 준비 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk' },
             { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
           ]
         }
