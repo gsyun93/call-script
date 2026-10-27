@@ -76,7 +76,7 @@ window.TOOL_DATA = {
           memo: false,
           text: '매장은 지금 운영 중이세요, 아니면 오픈 준비 중이세요?',
           options: [
-            { label: '운영 중', inputs: [{ key: 'store', placeholder: '매장명' }, { key: 'region', placeholder: '지역' }], set: { status: '운영 중' }, to: 'step:talk' },
+            { label: '운영 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'store', placeholder: '매장명' }], set: { status: '운영 중' }, to: 'step:talk' },
             { label: '오픈 준비 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk' },
             { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
           ]
@@ -91,27 +91,14 @@ window.TOOL_DATA = {
         h0: {
           label: '상담 메뉴',
           kind: 'pick',
-          choices: ['h_brand', 'h_needs', 'h_info']
-        },
-
-        // 브랜드 소개: 다른 곳은 못 하고 저희만 되는 것 위주로
-        h_brand: {
-          label: '브랜드 소개',
-          kind: 'say',
-          text: '대표님, 테이블오더 하는 회사는 많은데 포스까지 직접 만드는 곳은 저희 페이히어밖에 없어요. 다른 곳은 테이블오더 업체, 포스 업체, 단말기 업체가 다 따로라서 메뉴 하나 바꾸셔도 두세 군데 손대셔야 하고, 고장 나면 어디 문제인지 서로 미루거든요. 저희는 포스에서 바꾸시면 테이블오더에 바로 들어가고, 문제가 생겨도 고객센터 한 번이면 끝나요. 거기에 네이버랑 당근 리뷰가 둘 다 연동되는 것도 저희뿐이라, 매장 홍보까지 같이 챙기실 수 있어요.',
-          options: [
-            { label: '도입 계기', to: 'm1' },
-            { label: '알게 된 경로', to: 'm2' },
-            { label: '지금 기기 불편', to: 'm4' },
-            { label: '견적 정보 확인', to: 'h_info' }
-          ]
+          choices: ['h_needs', 'h_info']
         },
 
         // 니즈 파악
         h_needs: {
           label: '니즈 파악',
           kind: 'pick',
-          choices: ['m1', 'm2', 'm4'],
+          choices: ['m1', 'm4'],
           next: 'h_info',
           nextLabel: '견적 정보 확인으로'
         },
@@ -124,35 +111,7 @@ window.TOOL_DATA = {
             { label: '인건비·사람 구하기', to: 'd_staff' },
             { label: '바쁠 때 회전·주문 밀림', to: 'd_prepay' },
             { label: '메뉴가 자주 바뀜', to: 'd_menu' },
-            { label: '지금 쓰는 게 불편', to: 'm4' },
             { label: '외국인 손님', to: 'd_lang' },
-            { label: '견적 정보 확인으로', to: 'h_info' }
-          ]
-        },
-        m2: {
-          label: '알게 된 경로',
-          kind: 'ask',
-          text: '저희 페이히어는 어떻게 알고 연락 주셨을까요?',
-          next: 'h_needs',
-          options: [
-            { label: '주변 매장에서 봤어요', to: 'm2a' },
-            { label: '광고 보고요', to: 'h_brand' },
-            { label: '견적 정보 확인으로', to: 'h_info' }
-          ]
-        },
-        m2a: {
-          kind: 'say',
-          text: '아 그러세요? 혹시 어느 매장에서 보셨어요? 쓰시는 거 보시니까 어떤 점이 괜찮아 보이셨어요?',
-          next: 'h_info'
-        },
-        m3: {
-          label: '홍보·리뷰 관리',
-          kind: 'ask',
-          text: '매장 홍보나 리뷰 관리는 따로 어떻게 하고 계세요?',
-          next: 'h_needs',
-          options: [
-            { label: '따로 안 해요', to: 'd_naver' },
-            { label: '단골 관리가 고민', to: 'd_coupon' },
             { label: '견적 정보 확인으로', to: 'h_info' }
           ]
         },
@@ -250,17 +209,15 @@ window.TOOL_DATA = {
           kind: 'ask',
           memo: false,
           slots: [{ key: 'order', label: '선불·후불' }, { key: 'printers', label: '주방 프린터', prefix: '주방 프린터 ' }],
-          text: '어떤 음식 판매하세요? 주류나 추가 주문이 많은 편이세요?',
+          text: '주문이랑 결제는 어떻게 받으실 생각이세요? 자리에서 결제까지 받으실지, 나가실 때 카운터에서 받으실지요.',
           form: [
             { label: '주방 프린터', say: '주방은 한 곳이세요, 음료나 주류 나가는 데가 따로 있으세요? 주방 프린터는 1대가 기본으로 들어가고, 나뉘어 있으면 2대 놓으시는 경우가 많아요.',
               items: [{ key: 'printers', label: '주방 프린터', note: '1대는 기본 포함', def: '1' }] }
           ],
           next: 'h_info',
           options: [
-            { label: '주류·고기, 추가 주문 많음 → 후불형', to: 'n2_post', set: { order: '후불형' } },
-            { label: '식사 위주, 점심 회전 중요 → 선불형', to: 'n2_pre', set: { order: '선불형' } },
-            { label: '카페·분식, 먼저 계산 → 선불형', to: 'n2_cafe', set: { order: '선불형' } },
-            { label: '점심 저녁 장사가 다름 → 선불형', to: 'n2_mix', set: { order: '선불형' } }
+            { label: '자리에서 주문이랑 결제까지 → 선불형', to: 'n2_pre', set: { order: '선불형' } },
+            { label: '주문은 자리에서, 결제는 카운터에서 → 후불형', to: 'n2_post', set: { order: '후불형' } }
           ]
         },
         n2_post: {
@@ -271,16 +228,6 @@ window.TOOL_DATA = {
         n2_pre: {
           kind: 'say',
           text: '그럼 선불형을 추천드려요. 손님이 자리에서 주문하면서 바로 결제까지 끝내셔서 카운터에 계산 줄이 안 생기고, 점심 회전이 확 빨라져요. 카드 리더기가 들어가서 대당 월 {prePrice}원이에요. {printerLine}',
-          next: 'h_info'
-        },
-        n2_cafe: {
-          kind: 'say',
-          text: '먼저 계산하시는 매장이면 선불형이 딱 맞아요. 자리에서 주문하고 결제까지 끝나서 카운터 볼 사람이 따로 없어도 되고, 애플페이, 삼성페이도 다 돼요. {printerLine}',
-          next: 'h_info'
-        },
-        n2_mix: {
-          kind: 'say',
-          text: '그럼 점심엔 선불로 받아서 회전율 올리시고, 저녁엔 주류 추가 주문 생각해서 후불로 돌려서 쓰시면 돼요. 선불형으로 하시면 운영하시다가 언제든 바꾸실 수 있어요. {printerLine}',
           next: 'h_info'
         },
         n1: {
@@ -302,8 +249,8 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능' } },
-            { label: '약정이 남았대요', to: 'obj:contract-left', set: { posNow: '약정 남음' } },
-            { label: '연동 안 되는 포스 / 본사 지정', to: 'obj:pos', set: { posNow: '연동 확인 필요' } }
+            { label: '약정이 남았대요', to: 'h_info', set: { posNow: '약정 남음' } },
+            { label: '연동 안 되는 포스 / 본사 지정', to: 'h_info', set: { posNow: '연동 확인 필요' } }
           ]
         },
         n4_free: {
@@ -343,7 +290,7 @@ window.TOOL_DATA = {
           refs: [{ label: 'KT 하이오더', obj: 'kt' }, { label: '티오더', obj: 'torder' }, { label: '토스', obj: 'toss' }],
           options: [
             { label: '저희만 알아봤대요', to: 'n6_only', set: { rival: '없음' } },
-            { label: '그래도 망설인대요', input: { key: 'rival', placeholder: '어디랑 비교 중인지, 고객이 한 말' }, empty: '다른 곳 비교 중', to: 'h_info' }
+            { label: '견적 비교 중인 업체', input: { key: 'rival', placeholder: '업체명' }, empty: '다른 곳 비교 중', to: 'h_info' }
           ]
         },
         n6_only: {
@@ -359,7 +306,7 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '본인이 결정한대요', to: 'n7_self', set: { decider: '본인' } },
-            { label: '배우자·본사가 결정한대요', to: 'obj:decider', set: { decider: '배우자·본사' } }
+            { label: '배우자·본사가 결정한대요', to: 'h_info', set: { decider: '배우자·본사' } }
           ]
         },
         n7_self: {
@@ -385,19 +332,19 @@ window.TOOL_DATA = {
         d_staff: {
           label: '인건비 절감',
           kind: 'say',
-          text: '손님이 자리에서 주문하시면 주방 프린터로 바로 출력되니까 홀에서 주문 받으러 왔다 갔다 할 일이 없어져요. 선불로 쓰시면 계산까지 자리에서 끝나서, 사실상 홀 직원 한 명 몫을 해요.',
+          text: '손님이 자리에서 주문하시면 주방 프린터로 바로 출력되니까 홀에서 주문 받으러 왔다 갔다 할 일이 없어져요. 선불로 쓰시면 계산까지 자리에서 끝나서, 사실상 홀 직원 한 명 몫을 해요. 게다가 테이블오더 하는 곳 중에 포스까지 직접 만드는 데는 저희뿐이라, 주문이 포스에 바로 잡혀서 따로 옮겨 적거나 맞춰볼 일도 없어요.',
           next: 'h_info'
         },
         d_prepay: {
           label: '선불·후불 전환',
           kind: 'say',
-          text: '점심엔 선불로 받아서 계산 줄 없이 회전율 올리시고, 저녁엔 주류 추가 주문 생각해서 후불로 돌려서 쓰시는 매장이 많아요. 운영하시다가 언제든 바꾸셔도 됩니다.',
+          text: '점심엔 선불로 받아서 계산 줄 없이 회전율 올리시고, 저녁엔 주류 추가 주문 생각해서 후불로 돌려서 쓰시는 매장이 많아요. 운영하시다가 언제든 바꾸셔도 됩니다. 자리에서 결제하시면 네이버랑 당근 리뷰 쓰기로 바로 이어져서 리뷰도 같이 쌓이는데, 두 군데 다 연동되는 건 저희뿐이에요.',
           next: 'h_info'
         },
         d_menu: {
           label: '메뉴 수정이 쉬움',
           kind: 'say',
-          text: '구형 포스는 메뉴 바꾸실 때마다 대리점에 전화하셔야 하잖아요. 저희는 휴대폰에서 메뉴, 가격, 품절 바꾸시면 2~3초 안에 테이블오더에 반영돼요. 사진이랑 메뉴 설명도 넣으실 수 있어서 차림표 바꿀 일도 없어요.',
+          text: '구형 포스는 메뉴 바꾸실 때마다 대리점에 전화하셔야 하잖아요. 저희는 휴대폰에서 메뉴, 가격, 품절 바꾸시면 2~3초 안에 테이블오더에 반영돼요. 사진이랑 메뉴 설명도 넣으실 수 있어서 차림표 바꿀 일도 없어요. 다른 곳은 테이블오더 업체랑 포스 업체가 따로라 메뉴 하나 바꾸셔도 두세 군데 손대셔야 하는데, 저희는 포스까지 직접 만드는 유일한 회사라 한 번이면 끝나요.',
           next: 'h_info'
         },
         d_as: {
@@ -415,7 +362,7 @@ window.TOOL_DATA = {
         d_lang: {
           label: '다국어 메뉴',
           kind: 'say',
-          text: '메뉴가 다국어로 번역돼서 영어, 베트남어 같은 언어로 손님이 직접 보고 주문하실 수 있어요. 주문 받다가 말이 안 통해서 생기는 실수가 없어집니다.',
+          text: '메뉴가 다국어로 번역돼서 영어, 베트남어 같은 언어로 손님이 직접 보고 주문하실 수 있어요. 주문 받다가 말이 안 통해서 생기는 실수가 없어집니다. 메뉴는 포스에서 한 번만 바꾸시면 번역 메뉴까지 같이 바뀌고, 결제하시면 네이버랑 당근 리뷰로도 이어져서 매장 홍보까지 같이 돼요.',
           next: 'h_info'
         }
       }
@@ -431,14 +378,6 @@ window.TOOL_DATA = {
           calc: true,
           text: '후불형은 대당 월 {postPrice}원, 결제까지 되는 선불형은 카드 리더기가 들어가서 대당 월 {prePrice}원이에요. 부가세 포함 금액이고, 설치비랑 부자재, 결제 수수료는 따로 없습니다.',
           next: 'q2',
-          nextLabel: '견적 금액 안내',
-          options: [{ label: '선불형이 비싸대요', to: 'q_prepaid' }]
-        },
-        q_prepaid: {
-          kind: 'say',
-          calc: true,
-          text: '선불형은 자리에서 결제되는 카드 부품이 같이 들어가서 단가가 조금 더 있어요. 대신 카운터 계산 줄이 없어져서 점심 장사 매장은 많이들 쓰십니다.',
-          next: 'q2',
           nextLabel: '견적 금액 안내'
         },
         q2: {
@@ -448,20 +387,10 @@ window.TOOL_DATA = {
           next: 'step:close',
           nextLabel: '괜찮대요',
           options: [
-            { label: '비싸대요', to: 'obj:price' },
-            { label: '생각해본대요', to: 'obj:think' },
-            { label: '위약금 물어봐요', to: 'obj:penalty' },
-            { label: '리뷰·홍보로 한 번 더', to: 'q_review' }
-          ]
-        },
-        q_review: {
-          kind: 'say',
-          text: '하나만 더 말씀드리면, 매장 홍보나 리뷰 관리는 따로 하고 계세요? 저희만 네이버랑 당근 리뷰가 둘 다 연동돼서 손님이 결제하면 바로 리뷰 쓰기로 이어지고, 비 오는 날이나 한가한 날엔 단골 손님들한테 쿠폰 문자도 보내실 수 있어요. 테이블오더가 주문만 받는 게 아니라 매출까지 올려드리는 거예요.',
-          next: 'step:close',
-          nextLabel: '괜찮대요',
-          options: [
-            { label: '비싸대요', to: 'obj:price' },
-            { label: '생각해본대요', to: 'obj:think' }
+            { label: '비싸대요', to: 'step:close#cr_price' },
+            { label: '생각해본대요', to: 'step:close#cr_think' },
+            { label: '위약금 물어봐요', to: 'step:close#cr_penalty' },
+            { label: '리뷰·홍보로 한 번 더', to: 'step:close#cr_review' }
           ]
         }
       }
@@ -476,7 +405,7 @@ window.TOOL_DATA = {
         c1_run: {
           kind: 'say',
           text: '그럼 지금 영업하시는 데 지장 없게 설치 일정부터 잡아드릴게요. {n}대면 설치는 2시간 안쪽으로 끝나고, 끝나고 30분에서 1시간 정도 사용법도 같이 알려드려요. 보통 오픈 전 오전이나 쉬는 날로 많이 잡으시는데, 언제가 편하세요?',
-          fields: [{ key: 'installDate', label: '설치 희망일', type: 'date' }],
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }],
           next: 'c3',
           nextLabel: '날짜 잡았어요',
           options: [
@@ -503,24 +432,49 @@ window.TOOL_DATA = {
         c3: {
           kind: 'say',
           text: '사업자등록증, 대표자 신분증 사본, 세금계산서 받으실 이메일 세 가지만 카톡으로 보내주시면 됩니다. 카드 가맹할 때 통장 사본이랑 영업신고증 추가로 받을게요.',
-          next: 'c_end'
+          next: 'cr_close'
         },
         c_decider: {
           kind: 'say',
           text: '그럼 결정하시는 분이랑 제가 직접 한번 통화드려도 될까요? 몇 시쯤이 제일 편하세요? 가계약은 지금 통화하시는 대표님 명의로 해두시고, 사업자 나오면 그때 명의 바꾸셔도 됩니다.',
-          next: 'c_end'
+          next: 'cr_close'
         },
         c_today: {
           kind: 'say',
           text: '천천히 보셔도 돼요. 혹시 오늘 진행해주시면 상품권 20만 원 추가로 넣어드릴 수 있게 제가 위에 요청해볼게요.',
-          next: 'c_end'
+          next: 'cr_close'
         },
-        c_end: {
+        // 재통화 예정일: 날짜만 넣고 끝. 상황마다 읽을 멘트만 다르다
+        cr_close: {
+          label: '재통화 예정일',
           kind: 'say',
           text: '그럼 제가 견적서랑 명함, 소개서 카톡으로 바로 보내드리고 {date} {time}에 다시 연락드릴게요.',
-          fields: [{ key: 'date', label: '다음 연락일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }],
-          next: 'end'
-        }
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
+        },
+        cr_price: {
+          label: '재통화 예정일',
+          kind: 'say',
+          text: '금액은 포스기, 카드 단말기, 설치비, 3년 AS까지 다 들어간 거라 받으신 다른 견적이랑 포함 항목까지 같이 비교해보시면 차이가 보이실 거예요. 견적서 카톡으로 보내드리고 {date} {time}쯤 다시 연락드릴게요.',
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
+        },
+        cr_think: {
+          label: '재통화 예정일',
+          kind: 'say',
+          text: '네 천천히 보셔도 괜찮아요. 견적서 보내드릴 테니 보시고 고민되는 부분 있으시면 그때 편하게 말씀해 주세요. {date} {time}쯤 다시 연락드릴게요.',
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
+        },
+        cr_penalty: {
+          label: '재통화 예정일',
+          kind: 'say',
+          text: '중간에 해지하셔도 남은 개월 수만큼 할인된 월 금액으로만 계산되고, 혜택으로 드린 건 청구하지 않아요. 견적서에 같이 적어서 보내드리고 {date} {time}쯤 다시 연락드릴게요.',
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
+        },
+        cr_review: {
+          label: '재통화 예정일',
+          kind: 'say',
+          text: '저희만 네이버랑 당근 리뷰가 둘 다 연동돼서 손님이 결제하시면 바로 리뷰 쓰기로 이어지고, 한가한 날엔 단골 손님들한테 쿠폰 문자도 보내실 수 있어요. 견적서랑 같이 소개서 보내드리고 {date} {time}쯤 다시 연락드릴게요.',
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
+        },
       }
     },
     {
@@ -561,10 +515,10 @@ window.TOOL_DATA = {
           next: 'end'
         },
         r_end: {
+          label: '재통화 예정일',
           kind: 'say',
           text: '그럼 {date} {time}쯤 다시 연락드려도 될까요?',
-          fields: [{ key: 'date', label: '다음 연락일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }],
-          next: 'end'
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
         }
       }
     }
@@ -662,7 +616,7 @@ window.TOOL_DATA = {
       keywords: '상의 남편 와이프 아내 사모님 본사 결정',
       lostCount: '',
       answers: [
-        '그럼요 대표님. 제가 직접 한번 설명드리는 게 편하실 수도 있어서요, 몇 시쯤 통화 가능하실까요?',
+        '그러면 견적서 같이 보시고, 제가 {date} {time} 정도에 다시 연락드리겠습니다.',
         '설치 일정은 차는 편이라 가계약으로 날짜만 먼저 잡아두시고, 상의하신 다음에 본계약 하셔도 돼요. 가계약은 위약금 없습니다.'
       ],
       tip: '결정권자 이름, 통화 가능 시간을 받아서 기록. 다른 사람이 더 싼 곳을 권하는 경우가 많으니 비교 포인트를 카톡으로 정리해서 보내기.'

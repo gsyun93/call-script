@@ -767,6 +767,11 @@
     var p = stepPath(s);
     var html = cur.label && cur.kind === 'ask' ? '<p class="scene-tag">' + esc(cur.label) + '</p>' : '';
     if (cur.calc || cur.summary) html += '<div class="summary-wrap" id="summaryBox">' + renderSummary() + '</div>';
+    // 버튼 없이 끝나는 화면(재통화 예정일 등)은 읽을 멘트를 카드로
+    if (cur.text && !cur.next && !(cur.options || []).length) {
+      var own = { key: s.id + '.' + curId, text: textOf(s.id, curId) };
+      html += '<div class="refs top"><div class="ref-card" data-edit="' + own.key + '" title="꾹 누르면 수정">' + sayHtml(own) + '</div></div>';
+    }
     html += cur.calc ? renderCalc() : renderFields(sceneFields(s, cur));
     if (cur.form) html += renderForm(s, cur, curId);
     if (cur.refs) html += '<div class="refs top">' + cur.refs.map(function (r) {
@@ -804,6 +809,12 @@
         return;
       }
       var d = listDir(o.to);
+      // 칸만 채우고 목록으로 돌아가는 고객 답은 화살표 대신 멘트 없는 버튼으로
+      if (d && o.set) {
+        list += '<button type="button" class="choice' + (wentFrom(p, curId, o.to) ? ' is-done' : '') + '" data-go="' + esc(o.to) + '" data-key="' + key + '" data-oi="' + i + '" data-opt="' + i + '">' +
+          '<kbd>' + (key++) + '</kbd><span class="c-body"><b>' + esc(o.label) + '</b></span></button>';
+        return;
+      }
       if (d) { dirs.push({ dir: d, to: o.to, label: o.label, extra: ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : '') }); return; }
       // 읽기 전용 화면: 고객 답별 안내를 누르지 않는 카드로 (편집 중에는 버튼으로 보여서 고칠 수 있게)
       if (cur.readOnly && !state.editMode) {
@@ -1264,10 +1275,9 @@
   function answersMemo() {
     var v = state.vars, lines = [];
     if (v.status) {
-      var st = [v.status, v.region, v.biz, v.statusNote].filter(Boolean).join(', ');
+      var st = [v.status, v.biz, v.region, v.statusNote].filter(Boolean).join(', ');
       lines.push('매장 상황: ' + st);
     }
-    if (v.installDate) lines.push('설치 희망일: ' + fmtKoDate(v.installDate));
     D.steps.forEach(function (s) {
       Object.keys(s.nodes).forEach(function (id) {
         (shown(s.nodes[id]) && s.nodes[id].slots || []).forEach(function (sl) {
