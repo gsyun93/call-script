@@ -49,6 +49,8 @@
       if (st && st.nodes[a[1]]) {
         var o = custom.nodes[k], n = st.nodes[a[1]];
         ['label', 'nextLabel', 'options', 'choices'].forEach(function (f) { if (o[f] !== undefined) n[f] = o[f]; });
+        // 예전에 편집해 둔 목록에 지금은 없어진 화면이 들어 있으면 뺀다
+        if (n.choices) n.choices = n.choices.filter(function (id) { return st.nodes[id]; });
       }
     });
   }
@@ -393,7 +395,7 @@
     if (o) return { key: 'obj.' + o.ob.id + '.' + o.i, text: objText(o.ob.id, o.i) };
     var r = resolve(target);
     // 목록 화면으로 가는 버튼에는 그 안에 있는 항목 이름을 적는다
-    if (r && r.node.kind === 'pick') return { list: r.node.choices.filter(function (id) { return shown(r.step.nodes[id]); }).map(function (id) { return r.step.nodes[id].label; }).join(' · ') };
+    if (r && r.node.kind === 'pick') return { list: r.node.choices.filter(function (id) { return r.step.nodes[id] && shown(r.step.nodes[id]); }).map(function (id) { return r.step.nodes[id].label; }).join(' · ') };
     if (!r || !r.node.text) return null;
     return { key: r.step.id + '.' + r.id, text: textOf(r.step.id, r.id) };
   }
