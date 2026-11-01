@@ -205,7 +205,8 @@
       else post = parseInt(v.n, 10) || 0;
     }
     var units = post + pre;
-    var free = v.qFree === undefined || v.qFree === '' ? 1 : (parseInt(v.qFree, 10) || 0);
+    // 무상 대수는 기본 0, 직접 넣은 만큼만
+    var free = parseInt(v.qFree, 10) || 0;
     free = Math.min(free, units);
     // 무상 대수는 대수가 더 많은 쪽 단가로 뺀다
     var freePrice = pre > post ? Q.pre : Q.post;
@@ -247,6 +248,7 @@
       prePrice: won(prices().pre),
       posPrice: won(prices().pos),
       posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 두고 테이블오더만 연동해서 들어가요. ' : c.bundle ? '포스기랑 카드 단말기, 주방 프린터는 인터넷 결합으로 무상으로 들어가요. ' : '포스기랑 카드 단말기, 주방 프린터는 세트로 월 ' + won(prices().pos) + '원이에요. ',
+      freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 ' + c.paid + '대 금액만 받을게요. ' : '',
       setLine: c.withPos ? '에 포스기, 카드 단말기, 주방 프린터까지 해서' : '만 해서',
       powerLine: powerLine(),
       standLine: standLine(),
@@ -259,7 +261,7 @@
   }
   var varLabels = { name: '내 이름', store: '매장명', region: '지역', source: '유입 경로', n: '대수', free: '무상 대수', paid: '유료 대수', table: '테이블오더 월 금액', unit: '대당 금액', total: '월 합계', open: '오픈일', date: '날짜', time: '시간' };
   // 비어 있으면 자리표시 없이 그냥 빼는 값
-  var optionalVars = { benefits: true, posLine: true, powerLine: true, standLine: true, printerLine: true };
+  var optionalVars = { freeLine: true, benefits: true, posLine: true, powerLine: true, standLine: true, printerLine: true };
 
   function int(k) { return parseInt(state.vars[k], 10) || 0; }
   function powerLine() {
@@ -1034,12 +1036,15 @@
         state.vars[inp.dataset.fv] = inp.value;
         var g = cur.form[Number(inp.dataset.g)];
         // 대수(전원 방식)를 넣으면 거치대 첫 칸(고정형)에 같은 수를 넣어둔다. 거치대를 직접 고치면 그 뒤로는 안 건드림
-        if (g.match) state.vars.standEdited = true;
-        if (g.sum && !state.vars.standEdited) {
+        if (g.match && inp.dataset.fv === g.items[0].key) state.vars.standEdited = true;
+        if (!state.vars.standEdited) {
           cur.form.forEach(function (sg, sgi) {
-            if (sg.match !== g.sum) return;
-            var total = formGroupTotal(g), first = sg.items[0].key;
-            state.vars[first] = total ? String(total) : '';
+            if (!sg.match || !(g === sg || g.sum === sg.match)) return;
+            var pg = cur.form.filter(function (x) { return x.sum === sg.match; })[0];
+            if (!pg) return;
+            var others = sg.items.slice(1).reduce(function (t, it) { return t + int(it.key); }, 0);
+            var left = Math.max(0, formGroupTotal(pg) - others), first = sg.items[0].key;
+            state.vars[first] = left ? String(left) : (others ? '0' : '');
             var fi = $('[data-fv="' + first + '"]', box);
             if (fi) fi.value = state.vars[first];
             $('.fgroup[data-g="' + sgi + '"]', box).classList.remove('is-bad');
