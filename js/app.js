@@ -624,7 +624,11 @@
     return g.items.reduce(function (t, it) { return t + int(it.key); }, 0);
   }
   function formOk(cur) {
-    return (cur.form || []).every(function (g) { return formGroupTotal(g) > 0; });
+    // zero: 0대도 되는 묶음 (주방 프린터), 칸이 비어 있지만 않으면 된다
+    return (cur.form || []).every(function (g) {
+      if (g.zero) return g.items.every(function (it) { return String(state.vars[it.key] || '') !== ''; });
+      return formGroupTotal(g) > 0;
+    });
   }
   function formSumText(g) {
     var t = formGroupTotal(g);
@@ -655,7 +659,7 @@
       ['주문 방식', v.order],
       ['테이블오더', c.units ? c.units + '대' + (v.power ? ' (' + v.power + ')' : '') : ''],
       ['거치대', v.stand],
-      ['주방 프린터', int('printers') ? int('printers') + '대' : ''],
+      ['주방 프린터', int('printers') ? int('printers') + '대' : (state.vars.printers === '0' ? '없음' : '')],
       ['인터넷·CCTV', v.net],
       ['포스', v.posNow],
       ['혜택', [v.qBundle ? '인터넷 결합 (포스 세트 무상)' : ''].concat(c.picked.map(function (b) { return b.label; })).filter(Boolean).join(', ')],
@@ -698,7 +702,10 @@
     var parts = [];
     if (c.post) parts.push('후불 ' + c.post + '대');
     if (c.pre) parts.push('선불 ' + c.pre + '대');
-    return '<div class="cs-item"><span>테이블오더</span><b>월 ' + won(c.table) + '원</b><small>' + parts.join(' + ') +
+    var list = c.pre > c.post ? prices().pre : prices().post;
+    return '<div class="cs-item unit"><span>무상 포함 대당</span><b>월 ' + won(c.unit) + '원</b><small>' +
+        (c.free ? c.units + '대 중 ' + c.free + '대 무상, 정가 ' + won(list) + '원' : '무상 없음, 정가 그대로') + '</small></div>' +
+      '<div class="cs-item"><span>테이블오더</span><b>월 ' + won(c.table) + '원</b><small>' + parts.join(' + ') +
         (c.free ? ' 중 ' + c.free + '대 무상' : '') + ', 대당 ' + won(c.unit) + '원</small></div>' +
       '<div class="cs-item"><span>포스·단말기·프린터</span><b>' + (c.pos ? '월 ' + won(c.pos) + '원' : '무상') + '</b><small>' + (c.pos ? '인터넷 결합 시 무상' : '인터넷 결합') + '</small></div>' +
       '<div class="cs-item total"><span>월 합계</span><b>' + won(c.total) + '원</b><small>' + Q.months + '개월 ' + won(c.sum) + '원</small></div>';

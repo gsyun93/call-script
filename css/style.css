@@ -451,13 +451,15 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 .tog:active { transform: scale(.96); }
 .tog.is-on { background: var(--accent); color: #fff; }
 .tog small { margin-left: 6px; font-size: 12px; font-weight: 500; opacity: .75; }
-.calc-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.calc-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
 .cs-item { background: var(--bg); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
 .cs-item span { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 .cs-item b { font-size: 21px; }
 .cs-item small { font-size: 13px; color: var(--muted); }
 .cs-item.total { background: var(--accent-soft); }
 .cs-item.total b { color: var(--accent); font-size: 24px; }
+.cs-item.unit { background: #eaf3ff; }
+.cs-item.unit b { color: var(--ink); }
 .cs-empty { color: var(--muted); font-size: 15px; }
 
 /* 반론 답변 길게 눌러 수정 */
