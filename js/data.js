@@ -212,7 +212,7 @@ window.TOOL_DATA = {
           text: '주문이랑 결제는 어떻게 받으실 생각이세요? 자리에서 결제까지 받으실지, 나가실 때 카운터에서 받으실지요.',
           form: [
             { label: '주방 프린터', zero: true, say: '주방은 한 곳이세요, 음료나 주류 나가는 데가 따로 있으세요? 주방 프린터는 1대가 기본으로 들어가고, 나뉘어 있으면 2대 놓으시는 경우가 많아요.',
-              items: [{ key: 'printers', label: '주방 프린터', note: '1대는 기본 포함', def: '1' }] }
+              items: [{ key: 'printers', label: '주방 프린터', note: '없으면 0', def: '0' }] }
           ],
           next: 'h_info',
           options: [
