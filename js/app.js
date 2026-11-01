@@ -531,13 +531,9 @@
     showScene(true);
   }
 
-  // 처음으로: 입력한 값은 두고 흐름만 첫 화면으로
+  // 처음으로: 페이지를 처음 열었을 때처럼 입력한 값까지 지우고 첫 화면으로
   function restart() {
-    state.paths = {};
-    state.hist = [];
-    savePaths();
-    setStep(D.steps[0].id);
-    showScene(true);
+    resetCall();
   }
 
   // 받침에 맞춰 '로'/'으로'
