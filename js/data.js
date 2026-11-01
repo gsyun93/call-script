@@ -69,8 +69,8 @@ window.TOOL_DATA = {
           memo: false,
           text: '매장은 지금 운영 중이세요, 아니면 오픈 준비 중이세요?',
           options: [
-            { label: '운영 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'store', placeholder: '매장명' }], set: { status: '운영 중' }, to: 'step:talk#m4' },
-            { label: '오픈 준비 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk#m1' },
+            { label: '운영 중', inputs: [{ key: 'region', placeholder: '지역' }, { key: 'store', placeholder: '매장명' }], set: { status: '운영 중' }, to: 'step:talk#m4' },
+            { label: '오픈 준비 중', inputs: [{ key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk#m1' },
             { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
           ]
         }
@@ -129,7 +129,7 @@ window.TOOL_DATA = {
         h_info: {
           label: '견적 정보 확인',
           kind: 'pick',
-          choices: ['n5', 'n3', 'n2', 'n1', 'n4', 'n4_new', 'n6'],
+          choices: ['n5', 'n3', 'n1', 'n4', 'n4_new', 'n6'],
           next: 'step:quote',
           nextLabel: '견적 안내하기',
           needSlots: true,
@@ -159,11 +159,13 @@ window.TOOL_DATA = {
           next: 'h_info'
         },
         n3: {
-          label: '테이블 수·거치대',
+          label: '업종·대수·주문 방식',
           kind: 'ask',
           memo: false,
-          slots: [{ key: 'n', label: '대수' }, { key: 'power', label: '전원 방식' }, { key: 'stand', label: '거치대' }],
-          text: '테이블은 몇 개 정도 보고 계세요?',
+          slots: [{ key: 'biz', label: '업종' }, { key: 'n', label: '대수' }, { key: 'power', label: '전원 방식' }, { key: 'stand', label: '거치대' },
+            { key: 'printers', label: '주방 프린터', prefix: '주방 프린터 ' }, { key: 'order', label: '선불·후불' }],
+          text: '어떤 음식 판매하세요? 테이블은 몇 개 정도 보고 계세요?',
+          fields: [{ key: 'biz', label: '업종', type: 'text' }],
           // 숫자 칸 묶음. 묶음마다 합계가 1 이상이어야 다음으로 간다. sum은 합계를 담을 값
           form: [
             { label: '전원 방식', sum: 'n', set: 'power',
@@ -179,15 +181,17 @@ window.TOOL_DATA = {
               { key: 'sDesk', label: '탁상·액자형', note: '테이블 위에 세워둠' },
               { key: 'sCover', label: '커버형', note: '손님이 들고 봄' },
               { key: 'sWall', label: '벽걸이형', note: '벽에 설치' }
-            ] }
+            ] },
+            { label: '주방 프린터', zero: true, say: '지금 쓰시는 주방 프린터 그대로 연결해서 쓰실 수 있는데, 혹시 주방 프린터 따로 더 필요하실까요?',
+              sayNew: '주방 프린터는 몇 대 정도 필요하세요? 음료나 주류 나가는 데가 따로 있으시면 보통 2대 놓으세요.',
+              items: [{ key: 'printers', label: '주방 프린터', note: '없으면 0', def: '0' }] }
           ],
-          next: 'n3_done',
-          nextLabel: '입력 완료'
-        },
-        n3_done: {
-          kind: 'say',
-          text: '',
-          next: 'h_info'
+          // 칸을 다 채우고 선불·후불을 고르면 끝
+          next: 'h_info',
+          options: [
+            { label: '자리에서 주문이랑 결제까지 → 선불형', to: 'n2_pre', set: { order: '선불형' } },
+            { label: '주문은 자리에서, 결제는 카운터에서 → 후불형', to: 'n2_post', set: { order: '후불형' } }
+          ]
         },
         n3_batt: {
           kind: 'say',
@@ -198,23 +202,6 @@ window.TOOL_DATA = {
           kind: 'say',
           text: '콘센트 있는 자리는 전원형으로 해드릴게요. 충전 신경 쓰실 일이 아예 없어서 제일 편하세요. 공사 예정이시면 테이블마다 콘센트 하나씩 빼달라고 미리 말씀해두시면 되고, 선은 안 보이게 정리해드려요. 보조배터리형이랑 금액은 똑같아요.',
           next: 'h_info'
-        },
-        n2: {
-          label: '업종·주문 방식',
-          kind: 'ask',
-          memo: false,
-          slots: [{ key: 'order', label: '선불·후불' }, { key: 'printers', label: '주방 프린터', prefix: '주방 프린터 ' }],
-          text: '주문이랑 결제는 어떻게 받으실 생각이세요? 자리에서 결제까지 받으실지, 나가실 때 카운터에서 받으실지요.',
-          form: [
-            { label: '주방 프린터', zero: true, say: '지금 쓰시는 주방 프린터 그대로 연결해서 쓰실 수 있는데, 혹시 주방 프린터 따로 더 필요하실까요?',
-              sayNew: '주방 프린터는 몇 대 정도 필요하세요? 음료나 주류 나가는 데가 따로 있으시면 보통 2대 놓으세요.',
-              items: [{ key: 'printers', label: '주방 프린터', note: '없으면 0', def: '0' }] }
-          ],
-          next: 'h_info',
-          options: [
-            { label: '자리에서 주문이랑 결제까지 → 선불형', to: 'n2_pre', set: { order: '선불형' } },
-            { label: '주문은 자리에서, 결제는 카운터에서 → 후불형', to: 'n2_post', set: { order: '후불형' } }
-          ]
         },
         n2_post: {
           kind: 'say',

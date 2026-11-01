@@ -1000,7 +1000,7 @@
         // 숫자 칸 묶음이 있는 화면은 다 채워야 앞으로 간다 (목록으로 돌아가는 건 그냥)
         if (cur.form && !b.classList.contains('dir') && !formOk(cur)) {
           cur.form.forEach(function (g, gi) {
-            if (!formGroupTotal(g)) $('.fgroup[data-g="' + gi + '"]', box).classList.add('is-bad');
+            if (!formOk({ form: [g] })) $('.fgroup[data-g="' + gi + '"]', box).classList.add('is-bad');
           });
           var first = $('.fgroup.is-bad input', box);
           if (first) first.focus();
