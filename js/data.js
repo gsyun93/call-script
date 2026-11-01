@@ -339,7 +339,7 @@ window.TOOL_DATA = {
         },
         q2: {
           kind: 'say',
-          text: '{freeLine}{posLine}정리하면 테이블오더 {n}대{setLine} 월 {total}원이고 36개월 약정이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요. 혹시 결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
+          text: '{freeLine}{posLine}정리하면 테이블오더 {n}대{setLine} 월 {total}원이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요. 혹시 결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
           pass: true,
           next: 'q_decider'
         },

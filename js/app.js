@@ -222,8 +222,8 @@
     var extras = [];
     if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
     var batt = battCount(units);
-    if (batt) extras.push({ label: '보조배터리 ' + batt + '개', say: '보조배터리 ' + batt + '개' });
-    if (v.qConnect && v.qBundle && withPos && !v.qNoNet) extras.push({ label: '네이버 커넥트 무상', say: '네이버 커넥트 단말기(29만 원 상당) 무상' });
+    // 보조배터리는 요약에만 (멘트에는 안 넣음)
+    if (batt) extras.push({ label: '보조배터리 ' + batt + '개', say: '' });
     extras = extras.concat(picked);
     return {
       post: post, pre: pre, units: units, free: free, paid: units - free,
@@ -250,12 +250,15 @@
       prePrice: won(prices().pre),
       posPrice: won(prices().pos),
       posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 두고 테이블오더만 연동해서 들어가요. ' : c.bundle ? '포스기랑 카드 단말기, 주방 프린터는 인터넷 결합으로 무상으로 들어가요. ' : '포스기랑 카드 단말기, 주방 프린터는 세트로 월 ' + won(prices().pos) + '원이에요. ',
-      freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 ' + c.paid + '대 금액만 받을게요. ' : '',
+      freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 ' + c.paid + '대 금액만 받을게요. 그러면 대당 월 ' + won(c.unit) + '원꼴이에요. ' : '',
       setLine: c.withPos ? '에 포스기, 카드 단말기, 주방 프린터까지 해서' : '만 해서',
       powerLine: powerLine(),
       standLine: standLine(),
       printerLine: printerLine(),
-      benefits: (c.pay ? c.pay.say + ' ' : '') + (c.extras.length ? '여기에 ' + c.extras.map(function (b) { return b.say; }).join(', ') + '까지 넣어드릴게요. ' : ''),
+      benefits: (function () {
+        var says = c.extras.map(function (b) { return b.say; }).filter(Boolean);
+        return (c.pay ? c.pay.say + ' ' : '') + (says.length ? '여기에 ' + says.join(', ') + '까지 넣어드릴게요. ' : '');
+      })(),
       open: fmtKoDate(v.open),
       date: fmtKoDate(v.date),
       time: fmtKoTime(v.time)
@@ -736,7 +739,7 @@
       '<div class="togs">' +
         '<button type="button" class="tog' + (posOn() ? ' is-on' : '') + '" data-qt="qPos">포스·단말기·프린터 포함</button>' +
         (v.qNoNet ? '' : '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>' +
-          '<button type="button" class="tog' + (v.qConnect ? ' is-on' : '') + '" data-qt="qConnect">네이버 커넥트 무상<small>인터넷 결합</small></button>') +
+          '') +
         (isNewStore() ? '<button type="button" class="tog' + (photoOn() ? ' is-on' : '') + '" data-qt="qPhoto">' + esc(Q.photo.label) + '</button>' : '') +
         Q.benefits.filter(benShown).map(function (b) {
           return '<button type="button" class="tog' + (ben.indexOf(b.id) !== -1 ? ' is-on' : '') + '" data-qb="' + b.id + '">' + esc(b.label) +
