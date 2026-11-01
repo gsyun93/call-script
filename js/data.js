@@ -129,7 +129,7 @@ window.TOOL_DATA = {
         h_info: {
           label: '견적 정보 확인',
           kind: 'pick',
-          choices: ['n5', 'n3', 'n1', 'n4', 'n4_new', 'n6'],
+          choices: ['n5', 'n3', 'n4', 'n4_new', 'n6'],
           next: 'step:quote',
           nextLabel: '견적 안내하기',
           needSlots: true,
@@ -212,16 +212,6 @@ window.TOOL_DATA = {
           kind: 'say',
           text: '그럼 선불형이 맞아요. 자리에서 결제까지 끝나서 카운터에 계산 줄이 안 생겨요.',
           next: 'h_info'
-        },
-        n1: {
-          label: '오픈 일정',
-          kind: 'ask',
-          when: 'new',
-          slots: [{ key: 'open', label: '오픈일', or: 'openTbd' }],
-          text: '오픈은 언제쯤 예정이세요? 인테리어는 들어가셨어요?',
-          fields: [{ key: 'open', label: '오픈 예정일', type: 'date' }],
-          next: 'h_info',
-          options: [{ label: '아직 미정이래요', to: 'obj:notyet', set: { openTbd: '미정' } }]
         },
         n4: {
           label: '지금 포스·약정',
