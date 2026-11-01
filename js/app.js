@@ -109,13 +109,17 @@
     d.setDate(d.getDate() + n);
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
+  // 날짜로 못 읽은 말(예: 11월 말)은 적은 그대로 둔다
+  function isIso(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); }
   function fmtKoDate(iso) {
     if (!iso) return '';
+    if (!isIso(iso)) return String(iso);
     var p = iso.split('-');
     return Number(p[1]) + '월 ' + Number(p[2]) + '일';
   }
   function fmtKoTime(hhmm) {
     if (!hhmm) return '';
+    if (!/^\d{1,2}:\d{2}$/.test(String(hhmm))) return String(hhmm);
     var p = hhmm.split(':');
     var h = Number(p[0]), m = Number(p[1]);
     var ampm = h < 12 ? '오전' : '오후';
@@ -154,7 +158,7 @@
     return pad(h) + ':' + pad(mi);
   }
   function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
-  function shortDate(v) { if (!v) return ''; var p = v.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+  function shortDate(v) { if (!v) return ''; if (!isIso(v)) return String(v); var p = v.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
 
   function fmtStamp(ts) {
     var d = new Date(ts);
@@ -1019,8 +1023,20 @@
     $$('[data-fv]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         state.vars[inp.dataset.fv] = inp.value;
-        formRecalc(cur);
         var g = cur.form[Number(inp.dataset.g)];
+        // 대수(전원 방식)를 넣으면 거치대 첫 칸(고정형)에 같은 수를 넣어둔다. 거치대를 직접 고치면 그 뒤로는 안 건드림
+        if (g.match) state.vars.standEdited = true;
+        if (g.sum && !state.vars.standEdited) {
+          cur.form.forEach(function (sg, sgi) {
+            if (sg.match !== g.sum) return;
+            var total = formGroupTotal(g), first = sg.items[0].key;
+            state.vars[first] = total ? String(total) : '';
+            var fi = $('[data-fv="' + first + '"]', box);
+            if (fi) fi.value = state.vars[first];
+            $('.fgroup[data-g="' + sgi + '"]', box).classList.remove('is-bad');
+          });
+        }
+        formRecalc(cur);
         var sum = $('[data-sum="' + inp.dataset.g + '"]', box);
         if (sum) sum.textContent = formSumText(g);
         // 대수가 바뀌면 거치대 합계 안내도 다시
@@ -1071,9 +1087,10 @@
       inp.addEventListener('input', function () {
         var v = inp.value;
         if (inp.dataset.kind) {
+          var raw = v.trim();
           v = inp.dataset.kind === 'date' ? parseDateText(v) : parseTimeText(v);
-          inp.classList.toggle('is-bad', v === null);
-          if (v === null) return;
+          // 못 읽으면 적은 말 그대로 저장 (칸이 비었다고 막히지 않게)
+          if (v === null) v = raw;
         }
         state.vars[inp.dataset.var] = v;
         saveVars();
@@ -1094,9 +1111,9 @@
         inp.addEventListener('input', function () {
           var v = inp.value;
           if (inp.dataset.kind === 'date') {
+            var raw = v.trim();
             v = parseDateText(v);
-            inp.classList.toggle('is-bad', v === null);
-            if (v === null) return;
+            if (v === null) v = raw;
           } else {
             inp.classList.remove('is-bad');
           }
