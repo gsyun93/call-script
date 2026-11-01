@@ -189,10 +189,10 @@
     if (!isNewStore()) return false;
     return state.vars.qPhoto === undefined ? true : !!state.vars.qPhoto;
   }
-  // 보조배터리: 칸을 비워두면 보조배터리형 대수만큼
-  function battCount() {
+  // 보조배터리: 칸을 비워두면 테이블오더 총 대수만큼 (고치면 그 값)
+  function battCount(units) {
     var v = state.vars.qBatt;
-    return v === undefined || v === '' ? int('nBatt') : (parseInt(v, 10) || 0);
+    return v === undefined || v === '' ? (units || 0) : (parseInt(v, 10) || 0);
   }
   function benShown(b) {
     return b.when !== 'contract' || state.vars.posNow === '약정 남음';
@@ -221,7 +221,9 @@
     // 견적 멘트와 요약에 들어가는 혜택 (결제 방법은 따로)
     var extras = [];
     if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
-    if (battCount()) extras.push({ label: '보조배터리 ' + battCount() + '개', say: '보조배터리 ' + battCount() + '개' });
+    var batt = battCount(units);
+    if (batt) extras.push({ label: '보조배터리 ' + batt + '개', say: '보조배터리 ' + batt + '개' });
+    if (v.qConnect && v.qBundle && withPos && !v.qNoNet) extras.push({ label: '네이버 커넥트 무상', say: '네이버 커넥트 단말기(29만 원 상당) 무상' });
     extras = extras.concat(picked);
     return {
       post: post, pre: pre, units: units, free: free, paid: units - free,
@@ -702,7 +704,6 @@
       ['포스 세트', c.withPos ? (v.qBundle ? '포함 (인터넷 결합 무상)' : '포함') : '미포함, 지금 포스 연동'],
       ['결제', c.pay ? c.pay.label + ' (' + c.pay.note + ')' : ''],
       ['혜택', [v.qBundle && c.withPos ? '인터넷 결합 (포스 세트 무상)' : ''].concat(c.extras.map(function (b) { return b.label; })).filter(Boolean).join(', ')],
-      ['영수증 용지', c.units ? D.quote.receipt : ''],
       ['월 합계', c.units ? won(c.total) + '원 (36개월)' : '']
     ].filter(function (r) { return r[1]; });
     if (!rows.length) return '';
@@ -725,7 +726,7 @@
         num('qPost', '후불형 대수', String(c0.post)) +
         num('qPre', '선불형 대수', String(c0.pre)) +
         num('qFree', '무상 대수', String(c0.free)) +
-        num('qBatt', '보조배터리 (개)', String(battCount())) +
+        num('qBatt', '보조배터리 (개)', String(battCount(c0.units))) +
       '</div>' +
       '<div class="togs"><span class="tog-label">결제</span>' +
         Q.pay.map(function (p) {
@@ -734,7 +735,8 @@
       '</div>' +
       '<div class="togs">' +
         '<button type="button" class="tog' + (posOn() ? ' is-on' : '') + '" data-qt="qPos">포스·단말기·프린터 포함</button>' +
-        (v.qNoNet ? '' : '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>') +
+        (v.qNoNet ? '' : '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>' +
+          '<button type="button" class="tog' + (v.qConnect ? ' is-on' : '') + '" data-qt="qConnect">네이버 커넥트 무상<small>인터넷 결합</small></button>') +
         (isNewStore() ? '<button type="button" class="tog' + (photoOn() ? ' is-on' : '') + '" data-qt="qPhoto">' + esc(Q.photo.label) + '</button>' : '') +
         Q.benefits.filter(benShown).map(function (b) {
           return '<button type="button" class="tog' + (ben.indexOf(b.id) !== -1 ? ' is-on' : '') + '" data-qb="' + b.id + '">' + esc(b.label) +
@@ -767,6 +769,9 @@
       if (cs) cs.innerHTML = calcSum();
       var sb = $('#summaryBox', box);
       if (sb) sb.innerHTML = renderSummary();
+      // 보조배터리를 직접 안 넣었으면 대수가 바뀔 때 같이 맞춘다
+      var bi = $('[data-q="qBatt"]', box);
+      if (bi && bi !== document.activeElement && (state.vars.qBatt === undefined || state.vars.qBatt === '')) bi.value = battCount(quoteCalc().units);
       updateSays();
       renderMessages();
     }
