@@ -710,13 +710,19 @@ window.TOOL_DATA = {
     pre: 19500,
     pos: 38500,
     months: 36,
+    // 결제 방법: 하나만 고른다
+    pay: [
+      { id: 'kb', label: '국민카드 일시납', note: '36개월 무이자 + 상품권 40만', say: '국민카드로 일시납 하시면 36개월 무이자에 상품권 40만 원 드려요.' },
+      { id: 'card', label: '신한·현대·롯데 카드', note: '상품권 30만', say: '신한, 현대, 롯데 카드로 일시납 하시면 상품권 30만 원 드려요.' },
+      { id: 'etc', label: '그 외 카드·렌탈사', note: '상품권 20만', say: '다른 카드나 렌탈로 하셔도 상품권 20만 원 드려요.' }
+    ],
+    // 메뉴 사진은 오픈 준비 중 매장만, 보조배터리는 수량 칸으로 (금액 반영 없음)
+    photo: { label: '메뉴 사진 촬영 20장', say: '메뉴 사진 20장 촬영' },
+    receipt: '분기 50롤 (3년)',
     benefits: [
-      { id: 'ad', label: '광고 제거 무료', say: '광고 제거 무료' },
-      { id: 'photo', label: '메뉴 사진 촬영 20장', say: '메뉴 사진 출장 촬영 20장 무료' },
-      { id: 'battery', label: '보조배터리 여유분', say: '보조배터리 여유분' },
       { id: 'today', label: '당일 계약 상품권 20만', say: '오늘 진행하시면 상품권 20만 원', approve: true },
-      { id: 'kb', label: '국민카드 무이자 + 상품권 40만', say: '국민카드 결제 시 36개월 무이자에 상품권 40만 원', approve: true },
-      { id: 'penalty', label: '기존 위약금 지원', say: '지금 쓰시는 곳 위약금 지원', approve: true }
+      // when: 'contract'는 지금 포스 약정이 남은 매장만
+      { id: 'penalty', label: '기존 위약금 지원', say: '지금 쓰시는 곳 위약금 지원', approve: true, when: 'contract' }
     ]
   },
 

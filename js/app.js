@@ -179,6 +179,20 @@
   function posOn() {
     return state.vars.qPos === undefined ? true : !!state.vars.qPos;
   }
+  function isNewStore() { return state.vars.status === '오픈 준비 중'; }
+  // 메뉴 사진: 오픈 준비 중 매장만, 따로 끄지 않았으면 넣는다
+  function photoOn() {
+    if (!isNewStore()) return false;
+    return state.vars.qPhoto === undefined ? true : !!state.vars.qPhoto;
+  }
+  // 보조배터리: 칸을 비워두면 보조배터리형 대수만큼
+  function battCount() {
+    var v = state.vars.qBatt;
+    return v === undefined || v === '' ? int('nBatt') : (parseInt(v, 10) || 0);
+  }
+  function benShown(b) {
+    return b.when !== 'contract' || state.vars.posNow === '약정 남음';
+  }
   function quoteCalc() {
     var v = state.vars, Q = prices();
     var post = parseInt(v.qPost, 10) || 0, pre = parseInt(v.qPre, 10) || 0;
@@ -196,12 +210,18 @@
     var pos = !withPos || v.qBundle ? 0 : Q.pos;
     var total = table + pos;
     var picked = (v.qBen || []).map(function (id) {
-      return D.quote.benefits.filter(function (b) { return b.id === id; })[0];
+      return D.quote.benefits.filter(function (b) { return b.id === id && benShown(b); })[0];
     }).filter(Boolean);
+    var pay = D.quote.pay.filter(function (p) { return p.id === v.qPay; })[0] || null;
+    // 견적 멘트와 요약에 들어가는 혜택 (결제 방법은 따로)
+    var extras = [];
+    if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
+    if (battCount()) extras.push({ label: '보조배터리 ' + battCount() + '개', say: '보조배터리 ' + battCount() + '개' });
+    extras = extras.concat(picked);
     return {
       post: post, pre: pre, units: units, free: free, paid: units - free,
       table: table, unit: units ? table / units : 0, pos: pos, total: total,
-      sum: total * D.quote.months, picked: picked, bundle: !!v.qBundle, withPos: withPos
+      sum: total * D.quote.months, picked: picked, pay: pay, extras: extras, bundle: !!v.qBundle, withPos: withPos
     };
   }
 
@@ -227,7 +247,7 @@
       powerLine: powerLine(),
       standLine: standLine(),
       printerLine: printerLine(),
-      benefits: c.picked.length ? '여기에 ' + c.picked.map(function (b) { return b.say; }).join(', ') + '까지 넣어드릴게요. ' : '',
+      benefits: (c.pay ? c.pay.say + ' ' : '') + (c.extras.length ? '여기에 ' + c.extras.map(function (b) { return b.say; }).join(', ') + '까지 넣어드릴게요. ' : ''),
       open: fmtKoDate(v.open),
       date: fmtKoDate(v.date),
       time: fmtKoTime(v.time)
@@ -669,7 +689,9 @@
       ['인터넷·CCTV', v.net],
       ['포스', v.posNow],
       ['포스 세트', c.withPos ? (v.qBundle ? '포함 (인터넷 결합 무상)' : '포함') : '미포함, 지금 포스 연동'],
-      ['혜택', [v.qBundle && c.withPos ? '인터넷 결합 (포스 세트 무상)' : ''].concat(c.picked.map(function (b) { return b.label; })).filter(Boolean).join(', ')],
+      ['결제', c.pay ? c.pay.label + ' (' + c.pay.note + ')' : ''],
+      ['혜택', [v.qBundle && c.withPos ? '인터넷 결합 (포스 세트 무상)' : ''].concat(c.extras.map(function (b) { return b.label; })).filter(Boolean).join(', ')],
+      ['영수증 용지', c.units ? D.quote.receipt : ''],
       ['월 합계', c.units ? won(c.total) + '원 (36개월)' : '']
     ].filter(function (r) { return r[1]; });
     if (!rows.length) return '';
@@ -691,11 +713,18 @@
         num('qPost', '후불형 대수', v.n && !v.qPre && String(v.order || '').indexOf('선불') !== 0 ? v.n : '0') +
         num('qPre', '선불형 대수', v.n && !v.qPost && String(v.order || '').indexOf('선불') === 0 ? v.n : '0') +
         num('qFree', '무상 대수', '1') +
+        num('qBatt', '보조배터리 (개)', String(int('nBatt'))) +
+      '</div>' +
+      '<div class="togs"><span class="tog-label">결제</span>' +
+        Q.pay.map(function (p) {
+          return '<button type="button" class="tog' + (v.qPay === p.id ? ' is-on' : '') + '" data-qp="' + p.id + '">' + esc(p.label) + '<small>' + esc(p.note) + '</small></button>';
+        }).join('') +
       '</div>' +
       '<div class="togs">' +
         '<button type="button" class="tog' + (posOn() ? ' is-on' : '') + '" data-qt="qPos">포스·단말기·프린터 포함</button>' +
         '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>' +
-        Q.benefits.map(function (b) {
+        (isNewStore() ? '<button type="button" class="tog' + (photoOn() ? ' is-on' : '') + '" data-qt="qPhoto">' + esc(Q.photo.label) + '</button>' : '') +
+        Q.benefits.filter(benShown).map(function (b) {
           return '<button type="button" class="tog' + (ben.indexOf(b.id) !== -1 ? ' is-on' : '') + '" data-qb="' + b.id + '">' + esc(b.label) +
             (b.approve ? '<small>승인</small>' : '') + '</button>';
         }).join('') +
@@ -734,14 +763,23 @@
         state.vars[inp.dataset.q] = inp.value;
         // 다른 멘트에서 쓰는 대수도 같이 맞춘다
         var c = quoteCalc();
-        if (inp.dataset.q !== 'qFree' && c.units) state.vars.n = String(c.units);
+        if (inp.dataset.q !== 'qFree' && inp.dataset.q !== 'qBatt' && c.units) state.vars.n = String(c.units);
         changed();
       });
     });
     $$('[data-qt]', box).forEach(function (b) {
       b.addEventListener('click', function () {
-        state.vars[b.dataset.qt] = b.dataset.qt === 'qPos' ? !posOn() : !state.vars[b.dataset.qt];
+        var k = b.dataset.qt;
+        state.vars[k] = k === 'qPos' ? !posOn() : k === 'qPhoto' ? !photoOn() : !state.vars[k];
         b.classList.toggle('is-on', !!state.vars[b.dataset.qt]);
+        changed();
+      });
+    });
+    // 결제 방법은 하나만 (다시 누르면 해제)
+    $$('[data-qp]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.vars.qPay = state.vars.qPay === b.dataset.qp ? '' : b.dataset.qp;
+        $$('[data-qp]', box).forEach(function (x) { x.classList.toggle('is-on', x.dataset.qp === state.vars.qPay); });
         changed();
       });
     });
