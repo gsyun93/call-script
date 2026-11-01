@@ -663,6 +663,10 @@
     return txt;
   }
   function renderForm(s, cur, curId) {
+    // 앞에서 받은 대수(에이전시 전달 등)가 있고 아직 비어 있으면 첫 칸에 넣어둔다 (고칠 수 있음)
+    (cur.form || []).forEach(function (g) {
+      if (g.sum && !formGroupTotal(g) && int(g.sum)) state.vars[g.items[0].key] = String(int(g.sum));
+    });
     formRecalc(cur);
     return '<div class="fgroups">' + cur.form.map(function (g, gi) {
       // sayNew: 오픈 준비 중 매장일 때 대신 읽는 멘트
@@ -671,7 +675,7 @@
         (g.items.length > 1 ? '<span class="fg-sum" data-sum="' + gi + '">' + esc(formSumText(g)) + '</span>' : '') + '</div>' +
         (g.say ? '<div class="fg-say" data-edit="' + key + '" title="꾹 누르면 수정">' + sayHtml({ key: key, text: textByKey(key) }) + '</div>' : '') +
         '<div class="fg-items">' + g.items.map(function (it, ii) {
-          var ph = ii === 0 && g.sum && !formGroupTotal(g) && state.vars[g.sum] ? state.vars[g.sum] : '0';
+          var ph = '0';
           return '<label class="fitem"><span class="fi-label">' + esc(it.label) + (it.note ? '<small>' + esc(it.note) + '</small>' : '') + '</span>' +
             '<span class="fi-num"><input type="number" min="0" max="99" inputmode="numeric" data-fv="' + it.key + '" data-g="' + gi + '" value="' + esc(state.vars[it.key] || '') + '" placeholder="' + esc(ph) + '"><em>대</em></span></label>';
         }).join('') + '</div></div>';
@@ -703,18 +707,19 @@
 
   // 견적 계산기: 대수, 무상 대수, 결합, 혜택을 고르면 금액 멘트가 바로 바뀐다
   function renderCalc() {
-    var v = state.vars, Q = D.quote;
+    var v = state.vars, Q = D.quote, c0 = quoteCalc();
     var ben = v.qBen || [];
-    function num(key, label, ph) {
+    function num(key, label, def) {
+      var val = v[key] !== undefined && v[key] !== '' ? v[key] : def;
       return '<label class="field"><span>' + label + '</span><input type="number" min="0" max="99" inputmode="numeric" data-q="' + key + '"' +
-        ' value="' + esc(v[key] || '') + '" placeholder="' + esc(ph) + '"></label>';
+        ' value="' + esc(val) + '" placeholder="0"></label>';
     }
     return '<div class="calc">' +
       '<div class="calc-row">' +
-        num('qPost', '후불형 대수', v.n && !v.qPre && String(v.order || '').indexOf('선불') !== 0 ? v.n : '0') +
-        num('qPre', '선불형 대수', v.n && !v.qPost && String(v.order || '').indexOf('선불') === 0 ? v.n : '0') +
-        num('qFree', '무상 대수', '1') +
-        num('qBatt', '보조배터리 (개)', String(int('nBatt'))) +
+        num('qPost', '후불형 대수', String(c0.post)) +
+        num('qPre', '선불형 대수', String(c0.pre)) +
+        num('qFree', '무상 대수', String(c0.free)) +
+        num('qBatt', '보조배터리 (개)', String(battCount())) +
       '</div>' +
       '<div class="togs"><span class="tog-label">결제</span>' +
         Q.pay.map(function (p) {
@@ -723,7 +728,7 @@
       '</div>' +
       '<div class="togs">' +
         '<button type="button" class="tog' + (posOn() ? ' is-on' : '') + '" data-qt="qPos">포스·단말기·프린터 포함</button>' +
-        '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>' +
+        (v.qNoNet ? '' : '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>') +
         (isNewStore() ? '<button type="button" class="tog' + (photoOn() ? ' is-on' : '') + '" data-qt="qPhoto">' + esc(Q.photo.label) + '</button>' : '') +
         Q.benefits.filter(benShown).map(function (b) {
           return '<button type="button" class="tog' + (ben.indexOf(b.id) !== -1 ? ' is-on' : '') + '" data-qb="' + b.id + '">' + esc(b.label) +
@@ -762,6 +767,10 @@
     $$('[data-q]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         state.vars[inp.dataset.q] = inp.value;
+        // 후불·선불 대수는 화면에 보이는 두 값을 같이 저장해야 합계가 맞는다
+        if (inp.dataset.q === 'qPost' || inp.dataset.q === 'qPre') {
+          $$('[data-q="qPost"], [data-q="qPre"]', box).forEach(function (x) { state.vars[x.dataset.q] = x.value; });
+        }
         // 다른 멘트에서 쓰는 대수도 같이 맞춘다
         var c = quoteCalc();
         if (inp.dataset.q !== 'qFree' && inp.dataset.q !== 'qBatt' && c.units) state.vars.n = String(c.units);

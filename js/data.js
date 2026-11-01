@@ -149,8 +149,10 @@ window.TOOL_DATA = {
           text: '인터넷이랑 CCTV는 거래하시는 업체가 따로 있으세요?',
           next: 'h_info',
           options: [
-            { label: '있대요 (약정 중)', to: 'n5_have', set: { net: '있음, 약정 중' } },
-            { label: '없대요 / 새로 해야 해요', to: 'n5_none', set: { net: '없음, 같이 진행', qBundle: true } }
+            { label: '없어요 / 새로 해요', to: 'n5_none', set: { net: '없음, 같이 진행', qBundle: true, qNoNet: false } },
+            { label: '약정 중인데 옮길 수 있어요', to: 'n5_have', set: { net: '있음, 옮길 수 있음', qBundle: true, qNoNet: false } },
+            // 바꿀 생각 없으면 견적 계산기에서 인터넷 결합 버튼을 숨긴다
+            { label: '있고 바꿀 생각 없어요', to: 'h_info', set: { net: '있음, 변경 안 함', qBundle: false, qNoNet: true } }
           ]
         },
         n5_have: {
