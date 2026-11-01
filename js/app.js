@@ -876,7 +876,10 @@
             return '<input type="' + (num ? 'number' : 'text') + '"' + (num ? ' min="1" max="99" inputmode="numeric"' : '') +
               (it.kind ? ' data-kind="' + it.kind + '"' : '') + ' autocomplete="off" data-optvar="' + it.key + '" placeholder="' + esc(it.placeholder) + '" value="' + esc(v) + '">';
           }).join('') +
-          '<button type="button" class="go-btn" data-optgo="' + i + '">다음</button></div>';
+          '<button type="button" class="go-btn" data-optgo="' + i + '">다음</button>' +
+          // 넘어가서 바로 읽을 질문이 있으면 칸 아래에 (목록으로 가는 건 빼고)
+          (function () { var sy = sayOf(o.to); return sy && !sy.list ? '<div class="opt-say">' + sayHtml(sy) + '</div>' : ''; })() +
+          '</div>';
         return;
       }
       var d = listDir(o.to);

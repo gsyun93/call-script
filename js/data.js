@@ -32,16 +32,9 @@ window.TOOL_DATA = {
           source: '에이전시',
           kind: 'say',
           text: '네 대표님 안녕하세요, 페이히어 {name} 매니저입니다. 인터넷 상담 받으시면서 테이블오더도 필요하다고 말씀해 주셔서 연결받아 전화드렸어요. 잠깐 통화 괜찮으세요?',
-          next: 'o_net2',
+          next: 'o_status',
           nextLabel: '통화 괜찮대요',
           options: [{ label: '지금 통화 어렵대요', to: 'o_busy' }]
-        },
-        o_net2: {
-          kind: 'say',
-          fields: [{ key: 'n', label: '전달받은 대수', type: 'number' }],
-          text: '제가 전달받기로는 테이블오더 {n}대 정도 말씀해 주셨는데 맞으실까요? 인터넷 혜택 받으신 걸 테이블오더랑 포스 쪽에 같이 녹여서 말씀드리려고요.',
-          next: 'o_status',
-          nextLabel: '맞대요'
         },
         o_apply: {
           label: '외부 유입',
@@ -76,8 +69,8 @@ window.TOOL_DATA = {
           memo: false,
           text: '매장은 지금 운영 중이세요, 아니면 오픈 준비 중이세요?',
           options: [
-            { label: '운영 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'store', placeholder: '매장명' }], set: { status: '운영 중' }, to: 'step:talk' },
-            { label: '오픈 준비 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk' },
+            { label: '운영 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'store', placeholder: '매장명' }], set: { status: '운영 중' }, to: 'step:talk#m4' },
+            { label: '오픈 준비 중', inputs: [{ key: 'biz', placeholder: '업종' }, { key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk#m1' },
             { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
           ]
         }

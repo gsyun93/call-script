@@ -532,6 +532,9 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 /* 입력칸 달린 버튼의 설명 */
 .choice.has-input b small { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 2px; }
 .choice.has-input input[type="number"] { flex: 0 1 140px; }
+.choice.has-input .opt-say { flex-basis: 100%; order: 4; padding-left: 166px; font-size: 16px; color: var(--ink-2); line-height: 1.5; }
+.choice.has-input:has(.opt-say) { flex-wrap: wrap; row-gap: 10px; }
+@media (max-width: 720px) { .choice.has-input .opt-say { padding-left: 0; } }
 .choice.has-input input.is-bad { border-color: var(--s-lo); box-shadow: 0 0 0 3px #ffeef0; }
 
 /* 반론 화면: 다음 답변 미리보기, 다른 반론은 참고용 */
