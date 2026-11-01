@@ -816,9 +816,12 @@
       if (!n || !shown(n)) return '';
       no++;
       var filled = slotsFilled(n);
+      // 일부만 채운 질문도 채운 값은 보여준다
+      var part = !filled && n.slots && n.slots.some(function (sl) { return slotValue(sl); });
       var done = filled || (!n.slots && (p.indexOf(id) !== -1 || answerOf(id)));
       var say = n.kind === 'pick' ? { list: n.choices.filter(function (c) { return s.nodes[c] && shown(s.nodes[c]); }).map(function (c) { return s.nodes[c].label; }).join(' · ') }
-        : filled ? { list: n.slots.map(function (sl) { return (sl.prefix || '') + slotValue(sl); }).join(' · ') }
+        : filled || part ? { list: n.slots.filter(function (sl) { return slotValue(sl); }).map(function (sl) { return (sl.prefix || '') + slotValue(sl); }).join(' · ') +
+            (part ? ' · ' + n.slots.filter(function (sl) { return !slotValue(sl); }).map(function (sl) { return sl.label; }).join(', ') + ' 남음' : '') }
         : (n.text ? { key: s.id + '.' + id, text: textOf(s.id, id) } : null);
       return '<button type="button" class="tile' + (say ? ' has-say' : '') + (done ? ' is-done' : '') + (filled ? ' is-filled' : '') + '" data-go="' + id + '" data-key="' + no + '" data-ci="' + ci + '"' +
         (say && say.key ? ' data-edit="' + say.key + '"' : '') + '>' +
@@ -1003,6 +1006,12 @@
         if (b.dataset.lp) { delete b.dataset.lp; return; }
         // 숫자 칸 묶음이 있는 화면은 다 채워야 앞으로 간다 (목록으로 돌아가는 건 그냥)
         if (cur.form && !b.classList.contains('dir') && !formOk(cur)) {
+          if (b.dataset.opt && cur.options) {
+            var pre = cur.options[Number(b.dataset.opt)].set || {};
+            Object.keys(pre).forEach(function (k) { state.vars[k] = pre[k]; });
+            saveVars();
+            $$('[data-opt]', box).forEach(function (x) { x.classList.toggle('is-picked', x === b); });
+          }
           cur.form.forEach(function (g, gi) {
             if (!formOk({ form: [g] })) $('.fgroup[data-g="' + gi + '"]', box).classList.add('is-bad');
           });

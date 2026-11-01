@@ -624,3 +624,5 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 .choice.form-done:disabled { background: var(--chip); color: var(--muted); box-shadow: none; cursor: not-allowed; }
 .choice.form-done:disabled .say { color: var(--muted); }
 .choice.form-done:disabled:active { transform: none; }
+
+.choice.is-picked { box-shadow: 0 0 0 2px var(--accent) inset; }
