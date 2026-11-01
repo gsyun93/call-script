@@ -377,7 +377,7 @@
     }
     var st = findStep(k[0]);
     var n = st && st.nodes[k[1]];
-    if (n && k[2]) { var g = n.form && n.form[Number(k[2].slice(1))]; return g ? g.say : null; }
+    if (n && k[2]) { var g = n.form && n.form[Number(k[2].slice(1))]; return g ? (k[3] === 'new' ? g.sayNew : g.say) : null; }
     return n ? n.text : null;
   }
   function objText(id, i) {
@@ -665,7 +665,8 @@
   function renderForm(s, cur, curId) {
     formRecalc(cur);
     return '<div class="fgroups">' + cur.form.map(function (g, gi) {
-      var key = s.id + '.' + curId + '.g' + gi;
+      // sayNew: 오픈 준비 중 매장일 때 대신 읽는 멘트
+      var key = s.id + '.' + curId + '.g' + gi + (g.sayNew && isNewStore() ? '.new' : '');
       return '<div class="fgroup" data-g="' + gi + '"><div class="fg-head"><b>' + esc(g.label) + '</b>' +
         (g.items.length > 1 ? '<span class="fg-sum" data-sum="' + gi + '">' + esc(formSumText(g)) + '</span>' : '') + '</div>' +
         (g.say ? '<div class="fg-say" data-edit="' + key + '" title="꾹 누르면 수정">' + sayHtml({ key: key, text: textByKey(key) }) + '</div>' : '') +

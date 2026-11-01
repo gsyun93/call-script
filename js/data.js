@@ -211,7 +211,8 @@ window.TOOL_DATA = {
           slots: [{ key: 'order', label: '선불·후불' }, { key: 'printers', label: '주방 프린터', prefix: '주방 프린터 ' }],
           text: '주문이랑 결제는 어떻게 받으실 생각이세요? 자리에서 결제까지 받으실지, 나가실 때 카운터에서 받으실지요.',
           form: [
-            { label: '주방 프린터', zero: true, say: '주방은 한 곳이세요, 음료나 주류 나가는 데가 따로 있으세요? 주방 프린터는 1대가 기본으로 들어가고, 나뉘어 있으면 2대 놓으시는 경우가 많아요.',
+            { label: '주방 프린터', zero: true, say: '지금 쓰시는 주방 프린터 그대로 연결해서 쓰실 수 있는데, 혹시 주방 프린터 따로 더 필요하실까요?',
+              sayNew: '주방 프린터는 몇 대 정도 필요하세요? 음료나 주류 나가는 데가 따로 있으시면 보통 2대 놓으세요.',
               items: [{ key: 'printers', label: '주방 프린터', note: '없으면 0', def: '0' }] }
           ],
           next: 'h_info',
@@ -720,7 +721,6 @@ window.TOOL_DATA = {
     photo: { label: '메뉴 사진 촬영 20장', say: '메뉴 사진 20장 촬영' },
     receipt: '분기 50롤 (3년)',
     benefits: [
-      { id: 'today', label: '당일 계약 상품권 20만', say: '오늘 진행하시면 상품권 20만 원', approve: true },
       // when: 'contract'는 지금 포스 약정이 남은 매장만
       { id: 'penalty', label: '기존 위약금 지원', say: '지금 쓰시는 곳 위약금 지원', approve: true, when: 'contract' }
     ]
