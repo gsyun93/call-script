@@ -162,7 +162,7 @@ window.TOOL_DATA = {
           label: '업종·대수·주문 방식',
           kind: 'ask',
           memo: false,
-          slots: [{ key: 'biz', label: '업종' }, { key: 'n', label: '대수' }, { key: 'power', label: '전원 방식' }, { key: 'stand', label: '거치대' },
+          slots: [{ key: 'n', label: '대수' }, { key: 'power', label: '전원 방식' }, { key: 'stand', label: '거치대' },
             { key: 'printers', label: '주방 프린터', prefix: '주방 프린터 ' }, { key: 'order', label: '선불·후불' }],
           text: '어떤 음식 판매하세요? 테이블은 몇 개 정도 보고 계세요?',
           fields: [{ key: 'biz', label: '업종', type: 'text' }],
