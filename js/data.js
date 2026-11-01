@@ -248,9 +248,9 @@ window.TOOL_DATA = {
           text: '지금 포스는 어디 거 쓰고 계세요? 약정은 남아 있으세요?',
           next: 'h_info',
           options: [
-            { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능' } },
-            { label: '약정이 남았대요', to: 'h_info', set: { posNow: '약정 남음' } },
-            { label: '연동 안 되는 포스 / 본사 지정', to: 'h_info', set: { posNow: '연동 확인 필요' },
+            { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능', qPos: true } },
+            { label: '약정이 남았대요', to: 'h_info', set: { posNow: '약정 남음', qPos: false } },
+            { label: '연동 안 되는 포스 / 본사 지정', to: 'h_info', set: { posNow: '연동 확인 필요', qPos: false },
               say: '오케이포스, 이지포스, 유니온포스, 포스마스터는 연동돼요. KCP 체리포스는 연동이 안 돼서 포스를 바꾸셔야 해요. 프랜차이즈 본사 지정 포스는 바꿀 수 없어서 주문만 받는 용도로 쓰셔야 해요.' }
           ]
         },
@@ -267,8 +267,8 @@ window.TOOL_DATA = {
           text: '포스기는 따로 알아보신 데 있으세요?',
           next: 'h_info',
           options: [
-            { label: '아직 없대요', to: 'n4_rec', set: { posNow: '미정, 페이히어 추천' } },
-            { label: '알아본 데 있대요', to: 'n4_cmp', set: { posNow: '타사 검토 중' } }
+            { label: '아직 없대요', to: 'n4_rec', set: { posNow: '미정, 페이히어 추천', qPos: true } },
+            { label: '알아본 데 있대요', to: 'n4_cmp', set: { posNow: '타사 검토 중', qPos: true } }
           ]
         },
         n4_rec: {
@@ -366,7 +366,7 @@ window.TOOL_DATA = {
         },
         q2: {
           kind: 'say',
-          text: '{n}대 하시면 {free}대 금액은 빼드려서 {paid}대 금액만 받을게요. {posLine}정리하면 테이블오더 {n}대에 포스기, 카드 단말기, 주방 프린터까지 해서 월 {total}원이고 36개월 약정이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요. 혹시 결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
+          text: '{n}대 하시면 {free}대 금액은 빼드려서 {paid}대 금액만 받을게요. {posLine}정리하면 테이블오더 {n}대{setLine} 월 {total}원이고 36개월 약정이에요. {benefits}정확한 금액은 견적서로 카톡 보내드릴게요. 혹시 결정은 대표님이 하시는 걸까요, 같이 상의하시는 분이 계실까요?',
           pass: true,
           next: 'q_decider'
         },
