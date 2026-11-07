@@ -249,8 +249,8 @@
       postPrice: won(prices().post),
       prePrice: won(prices().pre),
       posPrice: won(prices().pos),
-      posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 두고 테이블오더만 연동해서 들어가요. ' : c.bundle ? '포스기랑 카드 단말기, 주방 프린터는 인터넷 결합으로 무상으로 들어가요. ' : '포스기랑 카드 단말기, 주방 프린터는 세트로 월 ' + won(prices().pos) + '원이에요. ',
-      freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 ' + c.paid + '대 금액만 받을게요. 그러면 대당 월 ' + won(c.unit) + '원꼴이에요. ' : '',
+      posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 쓰세요. ' : c.bundle ? '포스 세트는 인터넷 결합으로 무상이에요. ' : '포스 세트는 월 ' + won(prices().pos) + '원이에요. ',
+      freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 대당 월 ' + won(c.unit) + '원꼴이에요. ' : '',
       setLine: c.withPos ? '에 포스기, 카드 단말기, 주방 프린터까지 해서' : '만 해서',
       powerLine: powerLine(),
       standLine: standLine(),
@@ -564,7 +564,7 @@
   function slotValue(sl) {
     var v = state.vars[sl.key];
     if (sl.key === 'n') v = parseInt(v, 10) > 0 ? String(parseInt(v, 10)) : '';
-    else if (sl.key === 'open' && v) v = fmtKoDate(v);
+    else if ((sl.key === 'open' || sl.key === 'install') && v) v = fmtKoDate(v);
     if (!v && sl.or) v = state.vars[sl.or];
     if (/^\d+$/.test(String(v || ''))) v += '대';
     return v || '';
@@ -1581,8 +1581,10 @@
     state.editing = rec ? rec.id : null;
     $('#drawerTitle').textContent = rec ? '통화 기록 수정' : '통화 결과 기록';
 
-    var defStage = state.step === 'recall' ? '재컨택' : (state.step === 'close' || state.step === 'quote' ? '견적 후속' : '1차 컨택');
-    fillSelect($('#rStage'), D.callStages, rec ? rec.stage : defStage);
+    var defStage = state.step === 'recall' || state.step === 'close' || state.step === 'quote' ? '견적서발송' : '1차컨택';
+    // 예전 단계 이름으로 남은 기록은 고칠 때 그 이름을 유지한다
+    var stages = rec && rec.stage && D.callStages.indexOf(rec.stage) === -1 ? D.callStages.concat(rec.stage) : D.callStages;
+    fillSelect($('#rStage'), stages, rec ? rec.stage : defStage);
     fillSelect($('#rNext'), D.nextActions, rec ? rec.next : D.nextActions[0]);
 
     f.store.value = rec ? rec.store : autoStoreName();
