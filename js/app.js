@@ -388,6 +388,7 @@
     }
     var st = findStep(k[0]);
     var n = st && st.nodes[k[1]];
+    if (n && k[2] === 'new') return n.textNew;
     if (n && k[2]) { var g = n.form && n.form[Number(k[2].slice(1))]; return g ? (k[3] === 'new' ? g.sayNew : g.say) : null; }
     return n ? n.text : null;
   }
@@ -397,11 +398,15 @@
     var ob = D.objections.filter(function (x) { return x.id === id; })[0];
     return ob ? ob.answers[i] : '';
   }
+  // 오픈 준비 중 매장용 멘트(textNew)가 있으면 그 멘트의 키
+  function textKey(stepId, nodeId) {
+    var st = findStep(stepId), n = st && st.nodes[nodeId];
+    return stepId + '.' + nodeId + (n && n.textNew && isNewStore() ? '.new' : '');
+  }
   function textOf(stepId, nodeId) {
-    var e = state.edits[stepId + '.' + nodeId];
-    if (e != null) return e;
-    var st = findStep(stepId);
-    return st && st.nodes[nodeId] ? st.nodes[nodeId].text : '';
+    var key = textKey(stepId, nodeId);
+    if (state.edits[key] != null) return state.edits[key];
+    return origByKey(key) || '';
   }
   function saveEdits() { store.set('edits', state.edits); }
   // 단계의 첫 화면. 운영 중 매장용 시작 화면이 따로 있으면 그쪽으로
@@ -434,7 +439,7 @@
     // 목록 화면으로 가는 버튼에는 그 안에 있는 항목 이름을 적는다
     if (r && r.node.kind === 'pick') return { list: r.node.choices.filter(function (id) { return r.step.nodes[id] && shown(r.step.nodes[id]); }).map(function (id) { return r.step.nodes[id].label; }).join(' · ') };
     if (!r || !r.node.text) return null;
-    return { key: r.step.id + '.' + r.id, text: textOf(r.step.id, r.id) };
+    return { key: textKey(r.step.id, r.id), text: textOf(r.step.id, r.id) };
   }
 
   // 목록 화면에서 아직 안 채운 칸
@@ -619,7 +624,7 @@
     var r = cur.next && resolve(cur.next);
     if (r && r.node.fields && r.node.kind !== 'pick') list = list.concat(r.node.fields);
     var seen = {};
-    return list.filter(function (f) { if (seen[f.key]) return false; seen[f.key] = true; return true; });
+    return list.filter(function (f) { if (seen[f.key] || !shown(f)) return false; seen[f.key] = true; return true; });
   }
 
   function renderFields(list) {
@@ -828,7 +833,7 @@
       var say = n.kind === 'pick' ? { list: n.choices.filter(function (c) { return s.nodes[c] && shown(s.nodes[c]); }).map(function (c) { return s.nodes[c].label; }).join(' · ') }
         : filled || part ? { list: n.slots.filter(function (sl) { return slotValue(sl); }).map(function (sl) { return (sl.prefix || '') + slotValue(sl); }).join(' · ') +
             (part ? ' · ' + n.slots.filter(function (sl) { return !slotValue(sl); }).map(function (sl) { return sl.label; }).join(', ') + ' 남음' : '') }
-        : (n.text ? { key: s.id + '.' + id, text: textOf(s.id, id) } : null);
+        : (n.text ? { key: textKey(s.id, id), text: textOf(s.id, id) } : null);
       return '<button type="button" class="tile' + (say ? ' has-say' : '') + (done ? ' is-done' : '') + (filled ? ' is-filled' : '') + '" data-go="' + id + '" data-key="' + no + '" data-ci="' + ci + '"' +
         (say && say.key ? ' data-edit="' + say.key + '"' : '') + '>' +
         '<span class="t-head"><kbd>' + no + '</kbd><b>' + esc(n.label || '') + '</b></span>' +

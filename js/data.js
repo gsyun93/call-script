@@ -76,8 +76,8 @@ window.TOOL_DATA = {
           memo: false,
           text: '현재 매장 운영중이실까요, 아니면 새로 매장 오픈 준비중이실까요?',
           options: [
-            { label: '운영 중', inputs: [{ key: 'region', placeholder: '지역' }, { key: 'store', placeholder: '매장명' }], set: { status: '운영 중' }, to: 'step:talk#m4' },
-            { label: '오픈 준비 중', inputs: [{ key: 'region', placeholder: '지역' }, { key: 'open', placeholder: '오픈일 (예: 11/15)', kind: 'date' }], set: { status: '오픈 준비 중' }, to: 'step:talk#m1_new' },
+            { label: '운영 중', set: { status: '운영 중' }, to: 'step:talk#m4' },
+            { label: '오픈 준비 중', set: { status: '오픈 준비 중' }, to: 'step:talk#m1_new' },
             { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
           ]
         }
@@ -181,13 +181,16 @@ window.TOOL_DATA = {
           next: 'h_info'
         },
         n3: {
-          label: '업종·대수·주문 방식',
+          label: '매장·대수·주문 방식',
           kind: 'ask',
           memo: false,
           slots: [{ key: 'n', label: '대수' }, { key: 'power', label: '전원 방식' }, { key: 'stand', label: '거치대' },
             { key: 'printers', label: '주방 프린터', prefix: '주방 프린터 ' }, { key: 'order', label: '선불·후불' }],
-          text: '어떤 음식 판매하세요? 테이블은 몇 개 보고 계세요?',
-          fields: [{ key: 'biz', label: '업종', type: 'text' }],
+          text: '어느 지역에서 어떤 음식 판매하세요? 매장 이름이랑 테이블 수도 알려주세요.',
+          // textNew: 오픈 준비 중 매장일 때 대신 읽는 멘트
+          textNew: '어느 지역에 어떤 음식으로 오픈하세요? 오픈일이랑 테이블 수도 알려주세요.',
+          fields: [{ key: 'biz', label: '업종', type: 'text' }, { key: 'region', label: '지역', type: 'text' },
+            { key: 'store', label: '매장명', type: 'text', when: 'running' }, { key: 'open', label: '오픈일', type: 'date', when: 'new' }],
           // 숫자 칸 묶음. 묶음마다 합계가 1 이상이어야 다음으로 간다. sum은 합계를 담을 값
           form: [
             { label: '전원 방식', sum: 'n', set: 'power',
