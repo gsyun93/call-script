@@ -76,7 +76,7 @@ window.TOOL_DATA = {
           memo: false,
           text: '현재 매장 운영중이실까요, 아니면 새로 매장 오픈 준비중이실까요?',
           options: [
-            { label: '운영 중', set: { status: '운영 중' }, to: 'step:talk#m4' },
+            { label: '운영 중', set: { status: '운영 중' }, to: 'step:talk#m1' },
             { label: '오픈 준비 중', set: { status: '오픈 준비 중' }, to: 'step:talk#m1_new' },
             { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
           ]
@@ -98,7 +98,7 @@ window.TOOL_DATA = {
         h_needs: {
           label: '니즈 파악',
           kind: 'pick',
-          choices: ['m1', 'm1_new', 'm4'],
+          choices: ['m1', 'm1_new'],
           next: 'h_info',
           nextLabel: '견적 정보 확인으로'
         },
@@ -127,19 +127,6 @@ window.TOOL_DATA = {
             { label: '바쁠 때 회전·주문 밀림', to: 'd_prepay' },
             { label: '메뉴가 자주 바뀜', to: 'd_menu' },
             { label: '외국인 손님', to: 'd_lang' },
-            { label: '견적 정보 확인으로', to: 'h_info' }
-          ]
-        },
-        m4: {
-          label: '지금 기기 불편',
-          kind: 'ask',
-          text: '지금 쓰시는 포스나 테이블오더, 불편한 점 있으셨어요?',
-          next: 'h_needs',
-          options: [
-            { label: '메뉴 바꾸기 번거로움', to: 'd_menu' },
-            { label: '고장·AS가 느림', to: 'd_as' },
-            { label: '업체가 여러 개라 복잡', to: 'd_one' },
-            { label: '배터리·충전', to: 'n3_batt' },
             { label: '견적 정보 확인으로', to: 'h_info' }
           ]
         },
