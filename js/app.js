@@ -1009,9 +1009,53 @@
     $$('#script [data-say]').forEach(function (el) {
       el.innerHTML = fill(textByKey(el.dataset.say), true);
     });
+    renderQBar();
+  }
+
+  // ---------- 견적 미리보기 바 ----------
+  // 대수, 무상 대수(바에서 바로 조절), 월 합계. 견적 계산기와 같은 값(qFree)을 쓴다
+  function renderQBar() {
+    var bar = $('#qbar');
+    if (!bar) return;
+    var c = quoteCalc();
+    if (!c.units) {
+      bar.innerHTML = '<span class="qb-item"><span class="qb-lab">대수</span><b class="qb-empty">입력 전</b></span>';
+      return;
+    }
+    bar.innerHTML =
+      '<span class="qb-item"><span class="qb-lab">대수</span><b>' + c.units + '대</b></span>' +
+      '<span class="qb-item"><span class="qb-lab">무상</span>' +
+        '<button type="button" class="qb-step" data-qf="-1"' + (c.free <= 0 ? ' disabled' : '') + ' aria-label="무상 대수 줄이기">-</button>' +
+        '<b class="qb-free">' + c.free + '</b>' +
+        '<button type="button" class="qb-step" data-qf="1"' + (c.free >= c.units ? ' disabled' : '') + ' aria-label="무상 대수 늘리기">+</button></span>' +
+      '<span class="qb-item qb-total"><span class="qb-lab">월 합계</span><b>' + won(c.total) + '원</b>' +
+        '<small>36개월 ' + won(c.sum) + '원</small></span>';
+  }
+  function bindQBar() {
+    var bar = $('#qbar');
+    if (!bar) return;
+    bar.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-qf]');
+      if (!b || b.disabled) return;
+      var c = quoteCalc();
+      var nv = Math.max(0, Math.min(c.units, c.free + Number(b.dataset.qf)));
+      state.vars.qFree = String(nv);
+      saveVars();
+      // 견적 계산기가 열려 있으면 칸, 합계, 요약도 같이
+      var box = $('#script');
+      var fi = $('[data-q="qFree"]', box);
+      if (fi) fi.value = state.vars.qFree;
+      var cs = $('#calcSum', box);
+      if (cs) cs.innerHTML = calcSum();
+      var sb = $('#summaryBox', box);
+      if (sb) sb.innerHTML = renderSummary();
+      updateSays();
+      renderMessages();
+    });
   }
 
   function renderScript() {
+    renderQBar();
     var s = curStep(), p = stepPath(s);
     var curId = p[p.length - 1];
     var cur = s.nodes[curId];
@@ -1834,6 +1878,7 @@
 
   // ---------- 시작 ----------
   applyCustom();
+  bindQBar();
   renderHeader();
   bindTop();
   renderScript();
