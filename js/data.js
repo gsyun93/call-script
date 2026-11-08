@@ -162,7 +162,8 @@ window.TOOL_DATA = {
           // textNew: 오픈 준비 중 매장일 때 대신 읽는 멘트
           textNew: '어느 지역에 어떤 음식으로 오픈하세요? 오픈일이랑 테이블 수도 알려주세요.',
           fields: [{ key: 'biz', label: '업종', type: 'text' }, { key: 'region', label: '지역', type: 'text' },
-            { key: 'store', label: '매장명', type: 'text', when: 'running' }, { key: 'open', label: '오픈일', type: 'date', when: 'new' }],
+            { key: 'store', label: '매장명', type: 'text', when: 'running' }, { key: 'install', label: '도입 예정일', type: 'date', when: 'running' },
+            { key: 'open', label: '오픈 예정일', type: 'date', when: 'new' }],
           // 숫자 칸 묶음. 묶음마다 합계가 1 이상이어야 다음으로 간다. sum은 합계를 담을 값
           form: [
             { label: '전원 방식', sum: 'n', set: 'power',
@@ -443,16 +444,16 @@ window.TOOL_DATA = {
         r_run: {
           kind: 'say',
           text: '좋습니다. 영업에 지장 없게 설치 날짜부터 잡을게요. 언제가 편하세요?',
-          slots: [{ key: 'install', label: '설치 희망일' }],
-          fields: [{ key: 'install', label: '설치 희망일', type: 'date' }],
+          slots: [{ key: 'install', label: '도입 예정일' }],
+          fields: [{ key: 'install', label: '도입 예정일', type: 'date' }],
           next: 'r_docs',
           nextLabel: '날짜 잡았어요'
         },
         r_new: {
           kind: 'say',
           text: '좋습니다. 주민번호 뒷자리 가리시고 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
-          slots: [{ key: 'open', label: '오픈일' }],
-          fields: [{ key: 'open', label: '오픈일', type: 'date' }],
+          slots: [{ key: 'open', label: '오픈 예정일' }],
+          fields: [{ key: 'open', label: '오픈 예정일', type: 'date' }],
           next: 'r_docs',
           nextLabel: '날짜 잡았어요'
         },
