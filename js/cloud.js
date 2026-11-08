@@ -150,6 +150,18 @@
     });
   }
 
+  // ---------- 서버 함수 (파이프드라이브 기록) ----------
+  // 토큰은 수퍼베이스 서버에만 있다. 로그인한 본인만 부를 수 있다
+  window.cloudFn = function (name, body) {
+    if (!client || !user) return Promise.resolve({ ok: false, code: 'auth', message: '툴에 로그인해야 쓸 수 있습니다' });
+    return client.functions.invoke(name, { body: body }).then(function (r) {
+      if (r.error) return { ok: false, code: 'network', message: '서버에 연결할 수 없습니다' };
+      return r.data || { ok: false, code: 'error', message: '응답이 비어 있습니다' };
+    }, function () {
+      return { ok: false, code: 'network', message: '서버에 연결할 수 없습니다' };
+    });
+  };
+
   // ---------- 시작 ----------
   try { localStorage.removeItem(PREFIX + 'localOnly'); } catch (e) { /* 예전 설정 정리 */ }
   if (!window.supabase || !window.supabase.createClient) {

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>세일즈 마스터</title>
-<link rel="stylesheet" href="css/style.css?v=82">
+<link rel="stylesheet" href="css/style.css?v=83">
 </head>
 <body>
 
@@ -128,10 +128,21 @@
 
     <label>메모<textarea name="memo" rows="4" placeholder="견적 조건, 비교 업체, 결정권자 등. 전화번호 같은 개인정보는 적지 마세요."></textarea></label>
 
+    <fieldset class="pd" id="pdBox">
+      <legend>파이프드라이브</legend>
+      <div class="pd-row">
+        <input name="dealId" type="text" inputmode="numeric" placeholder="딜 ID (예: 92732) 또는 딜 주소">
+        <button type="button" class="btn-ghost" id="pdLoad">불러오기</button>
+      </div>
+      <p class="pd-msg" id="pdMsg"></p>
+      <div class="pd-panel" id="pdPanel" hidden></div>
+    </fieldset>
+
     <div class="drawer-foot">
       <span class="muted">Ctrl + Enter 로 저장</span>
       <button type="button" class="btn-ghost" data-close>취소</button>
       <button type="submit" class="btn">저장</button>
+      <button type="button" class="btn" id="pdSend" hidden>저장하고 파이프드라이브에 기록</button>
     </div>
   </form>
 </div>
@@ -151,8 +162,8 @@
   </div>
 </div>
 
-<script src="js/data.js?v=82"></script>
+<script src="js/data.js?v=83"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/cloud.js?v=82"></script>
+<script src="js/cloud.js?v=83"></script>
 </body>
 </html>

@@ -422,6 +422,31 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 .sens-opts small { font-size: 11px; color: var(--muted); font-weight: 400; }
 .sens-desc { margin: 0; font-size: 13px; color: var(--ink-2); min-height: 1em; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* 결과 기록 창: 파이프드라이브 */
+.pd { border-top: 1px solid var(--line); padding-top: 14px; }
+.pd-row { display: flex; gap: 8px; }
+.pd-row input { flex: 1; min-width: 0; }
+.pd-msg { margin: 0; font-size: 13px; color: var(--ink-2); }
+.pd-msg:empty { display: none; }
+.pd-msg.is-bad { color: var(--s-lo); font-weight: 600; }
+.pd-panel { display: flex; flex-direction: column; gap: 14px; }
+.pd-deal { margin: 0; font-size: 14px; }
+.pd-deal em { font-style: normal; color: var(--s-mid); font-weight: 600; }
+.pd-sec { display: flex; flex-direction: column; gap: 6px; }
+.pd-sec h4 { margin: 0; font-size: 14px; }
+.pd-sec h4 small { font-weight: 500; color: var(--muted); margin-left: 4px; }
+.pd-sub { margin: 0; font-size: 12px; color: var(--muted); }
+.pd-next { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.pd-next input[type="text"] { flex: 1; min-width: 160px; }
+.pd-fields { display: flex; flex-direction: column; gap: 4px; }
+.drawer-body label.pd-f { display: grid; grid-template-columns: 20px 120px 1fr; align-items: center; gap: 4px 8px; flex-direction: row; font-size: 14px; color: var(--ink); padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.pd-f small { grid-column: 3; font-size: 12px; color: var(--muted); }
+.pd-f.is-locked { opacity: .55; }
+.pd-f select { font-size: 14px; padding: 4px 8px; }
+.pd-val { font-weight: 600; }
+.pd-tag { display: inline-block; margin-left: 6px; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.pd-tag.is-bad { background: #ffeef0; color: var(--s-lo); }
 .chips .muted { margin: 0; font-size: 13px; }
 .chip { position: relative; }
 .chip input { position: absolute; opacity: 0; pointer-events: none; }

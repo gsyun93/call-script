@@ -235,7 +235,7 @@
     var extras = [];
     if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
     // 타사 포스를 쓰면 마스터 태블릿 (기본 1대). 무상이라 대수와 무상 대수에 같이 센다
-    var master = withPos || !tables ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
+    var master = withPos || !tables || v.posOurs ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
     if (master) extras.push({ label: D.quote.master.label + ' ' + master + '대 (무상 대수에 포함)', say: '' });
     var units = tables + master, free = freeT + master;
     var batt = battCount(tables);
@@ -1733,6 +1733,7 @@
       renderReasons(null, []);
     }
 
+    pdReset(!rec);
     $('#drawer').classList.add('is-on');
     $('#drawer').setAttribute('aria-hidden', 'false');
     setTimeout(function () { (f.store.value ? f.querySelector('input[name="sens"]') : f.store).focus(); }, 30);
@@ -1760,9 +1761,26 @@
     var f = $('#recordForm');
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      var sens = (f.querySelector('input[name="sens"]:checked') || {}).value;
-      if (!sens) { toast('고객감도를 골라주세요'); return; }
-      var rec = {
+      var rec = collectRec();
+      if (!rec) return;
+      commitRec(rec, '기록했습니다');
+    });
+    bindPd(f);
+
+    f.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+  }
+
+  // 결과 기록 창의 값으로 기록 한 줄
+  function collectRec() {
+    var f = $('#recordForm');
+    var sens = (f.querySelector('input[name="sens"]:checked') || {}).value;
+    if (!sens) { toast('고객감도를 골라주세요'); return null; }
+    var rec = {
         id: state.editing || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
         ts: Date.now(),
         store: f.store.value.trim(),
@@ -1775,29 +1793,269 @@
         recallDate: f.recallDate.value,
         memo: f.memo.value.trim()
       };
-      var isNew = !state.editing;
-      if (state.editing) {
-        var old = state.records.filter(function (r) { return r.id === state.editing; })[0];
-        if (old) { rec.ts = old.ts; rec.source = old.source || ''; }
-        state.records = state.records.map(function (r) { return r.id === rec.id ? rec : r; });
-      } else {
-        state.records.unshift(rec);
-      }
-      if (saveRecords()) {
-        closeDrawer();
-        // 이번 통화를 기록했으면 다음 통화를 위해 입력칸을 비운다 (지난 기록 수정은 그대로)
-        if (isNew) resetCall();
-        renderLog();
-        toast('기록했습니다');
-      }
-    });
+    return rec;
+  }
+  function commitRec(rec, msg) {
+    var isNew = !state.editing;
+    if (state.editing) {
+      var old = state.records.filter(function (r) { return r.id === state.editing; })[0];
+      if (old) { rec.ts = old.ts; rec.source = old.source || ''; if (old.pd && !rec.pd) rec.pd = old.pd; }
+      state.records = state.records.map(function (r) { return r.id === rec.id ? rec : r; });
+    } else {
+      state.records.unshift(rec);
+    }
+    if (!saveRecords()) return false;
+    closeDrawer();
+    // 이번 통화를 기록했으면 다음 통화를 위해 입력칸을 비운다 (지난 기록 수정은 그대로)
+    if (isNew) resetCall();
+    renderLog();
+    if (msg) toast(msg);
+    return true;
+  }
 
-    f.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { cancelable: true }));
+  // ---------- 파이프드라이브 기록 ----------
+  // 딜 ID로 불러와서(담당자 확인) 항목 채우기, 오늘 통화(완료), 넥스트 액션(미완료)을 한 번에 보낸다
+  var pd = { data: null, busy: false, noteTouched: false };
+  var PD_STEPS = { fields: '딜 항목', today: '오늘 통화', next: '넥스트 액션' };
+  function pdDealId(v) {
+    var s = String(v || '');
+    var m = s.match(/deal\/(\d+)/);
+    return m ? m[1] : s.replace(/[^0-9]/g, '');
+  }
+  function pdMsg(t, bad) {
+    var el = $('#pdMsg');
+    el.textContent = t || '';
+    el.classList.toggle('is-bad', !!bad);
+  }
+  function pdReset(show) {
+    pd.data = null;
+    pd.noteTouched = false;
+    $('#pdBox').hidden = !show;
+    $('#recordForm').dealId.value = '';
+    $('#pdPanel').hidden = true;
+    $('#pdPanel').innerHTML = '';
+    $('#pdSend').hidden = true;
+    pdMsg('');
+  }
+  // 파이프드라이브 노트: 감도와 이유, 메모
+  function pdNote() {
+    var f = $('#recordForm');
+    var sens = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
+    var reasons = $$('input[name="reason"]:checked', f).map(function (c) { return c.value; });
+    if (f.reasonText.value.trim()) reasons.push(f.reasonText.value.trim());
+    var lines = [];
+    if (sens) lines.push('감도: ' + sens + (reasons.length ? ' (' + reasons.join(', ') + ')' : ''));
+    if (f.memo.value.trim()) lines.push(f.memo.value.trim());
+    return lines.join('\n');
+  }
+  function findOpt(options, word) {
+    var w = String(word || '').replace(/\s/g, '');
+    if (w.length < 2) return '';
+    var exact = options.filter(function (o) { return o.replace(/\s/g, '') === w; });
+    if (exact.length) return exact[0];
+    var hit = options.filter(function (o) { var x = o.replace(/\s/g, ''); return x.indexOf(w) !== -1 || w.indexOf(x) !== -1 && x.length >= 2; });
+    return hit.length === 1 ? hit[0] : '';
+  }
+  // 통화에서 받은 값으로 채울 항목 (이름 → 값)
+  function pdProposals(fields) {
+    var v = state.vars, c = quoteCalc(), isNew = v.status === '오픈 준비 중', running = v.status === '운영 중';
+    var opt = {};
+    fields.forEach(function (f) { opt[f.name] = f.options || []; });
+    var p = {};
+    p['★리드 감도'] = '';
+    if (isNew || running) p['매장 운영 여부'] = isNew ? '준비중' : '운영중';
+    if (v.store) p['매장명'] = v.store;
+    if (c.tables) p['테이블 수'] = String(c.tables);
+    if (isIso(v.open)) p['오픈예정일자'] = v.open;
+    p['업종'] = findOpt(opt['업종'] || [], v.biz);
+    var rivals = (v.rivalPick || []).map(function (x) { return x === '하이오더' ? 'KT 하이오더' : x; });
+    String(v.rivalEtc || '').split(/[,·/]/).forEach(function (w) { var o = findOpt(opt['[Product] 경쟁사'] || [], w.trim()); if (o) rivals.push(o); });
+    if (rivals.length) p['[Product] 경쟁사'] = rivals;
+    p['사용 포스'] = isNew ? '신규 오픈 예정' : v.posOurs ? '페이히어' : findOpt(opt['사용 포스'] || [], v.posProg);
+    var ours = v.posOurs || /페이히어/.test(v.posProg || '');
+    if (isNew) p['매장 운영'] = '신규';
+    else if (running) p['매장 운영'] = ours ? '운영-셀러' : '운영-타포스';
+    return p;
+  }
+  function pdCloseDate() {
+    var v = state.vars;
+    var d = v.status === '오픈 준비 중' ? v.open : v.install;
+    return isIso(d) ? d : '';
+  }
+  function renderPdPanel() {
+    var d = pd.data, f = $('#recordForm');
+    var props = pdProposals(d.fields);
+    var sens = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
+    var status = d.deal.status === 'won' ? ' · 성사된 딜' : d.deal.status === 'lost' ? ' · 실패한 딜' : '';
+    var pend = d.pending[0];
+    var html = '<p class="pd-deal"><b>' + esc(d.deal.title || ('딜 ' + d.deal.id)) + '</b> · 소유자 ' + esc(d.deal.owner) + (status ? '<em>' + status + '</em>' : '') + '</p>';
+    html += '<div class="pd-sec"><h4>오늘 통화 <small>재컨택 · 완료</small></h4>' +
+      '<p class="pd-sub">' + (pend ? '잡혀 있던 재컨택(' + esc(shortDate(pend.due_date)) + ')을 완료로 바꾸고 노트를 붙입니다' : '재컨택 활동을 새로 만들고 완료로 표시합니다') + '</p>' +
+      '<textarea id="pdNote" rows="4">' + esc(pdNote()) + '</textarea></div>';
+    html += '<div class="pd-sec"><h4>넥스트 액션 <small>재컨택 · 미완료</small></h4>' +
+      '<div class="pd-next"><span id="pdNextDate">' + esc(f.recallDate.value ? fmtKoDate(f.recallDate.value) : '재컨택일 없음 (만들지 않음)') + '</span>' +
+      '<input id="pdTime" type="time" value="' + esc(/^\d{1,2}:\d{2}$/.test(state.vars.time || '') ? state.vars.time : '') + '">' +
+      '<input id="pdNextNote" type="text" placeholder="할 일 (예: 견적서 보고 다시 통화)"></div></div>';
+    html += '<div class="pd-sec"><h4>딜 항목 <small>비어 있는 항목만 채움</small></h4><div class="pd-fields">';
+    d.fields.forEach(function (fd) {
+      var cur = Array.isArray(fd.current) ? fd.current.join(', ') : fd.current;
+      var isSet = fd.type === 'set';
+      var locked = !isSet && cur;
+      var val = fd.name === '★리드 감도' ? sens : props[fd.name];
+      var ctl;
+      if (fd.name === '업종' || fd.name === '사용 포스') {
+        ctl = '<select data-pv="' + esc(fd.name) + '"' + (locked ? ' disabled' : '') + '><option value="">선택 안 함</option>' +
+          fd.options.map(function (o) { return '<option' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+      } else {
+        var shown = Array.isArray(val) ? val.join(', ') : (val || '');
+        ctl = '<span class="pd-val" data-pv="' + esc(fd.name) + '">' + esc(shown || '-') + '</span>';
       }
+      var has = Array.isArray(val) ? val.length : !!val;
+      html += '<label class="pd-f' + (locked ? ' is-locked' : '') + '"><input type="checkbox" data-pf="' + esc(fd.name) + '"' + (has && !locked ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
+        '<b>' + esc(fd.name) + '</b>' + ctl +
+        '<small>' + (locked ? '기존 값 유지: ' + esc(cur) : isSet && cur ? '지금: ' + esc(cur) + ' (더함)' : '비어 있음') + '</small></label>';
     });
+    var cd = pdCloseDate();
+    html += '<label class="pd-f"><input type="checkbox" data-pf="__close"' + (cd ? ' checked' : ' disabled') + '><b>예상 완료 날짜</b>' +
+      '<span class="pd-val">' + esc(cd || '-') + '</span><small>지금: ' + esc(d.deal.expected_close_date || '비어 있음') + (cd ? ' (오픈·도입 예정일로 바꿈)' : '') + '</small></label>';
+    if (d.missing && d.missing.length) html += '<p class="pd-sub">파이프드라이브에서 못 찾은 항목: ' + esc(d.missing.join(', ')) + '</p>';
+    html += '</div></div>';
+    $('#pdPanel').innerHTML = html;
+    $('#pdPanel').hidden = false;
+    $('#pdSend').hidden = false;
+    $('#pdNote').addEventListener('input', function () { pd.noteTouched = true; });
+    // 업종·사용 포스를 고르면 체크도 같이
+    $$('#pdPanel select[data-pv]').forEach(function (s) {
+      s.addEventListener('change', function () {
+        var cb = $('#pdPanel [data-pf="' + s.dataset.pv + '"]');
+        if (cb && !cb.disabled) cb.checked = !!s.value;
+      });
+    });
+  }
+  // 감도, 메모, 재컨택일을 바꾸면 미리보기도 맞춘다
+  function pdSync() {
+    if (!pd.data) return;
+    var f = $('#recordForm');
+    if (!pd.noteTouched) $('#pdNote').value = pdNote();
+    var sens = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
+    var sv = $('#pdPanel .pd-val[data-pv="★리드 감도"]');
+    if (sv) sv.textContent = sens || '-';
+    var cb = $('#pdPanel [data-pf="★리드 감도"]');
+    if (cb && !cb.disabled) cb.checked = !!sens;
+    $('#pdNextDate').textContent = f.recallDate.value ? fmtKoDate(f.recallDate.value) : '재컨택일 없음 (만들지 않음)';
+  }
+  function pdPayload() {
+    var f = $('#recordForm'), d = pd.data;
+    var props = pdProposals(d.fields);
+    props['★리드 감도'] = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
+    var fields = {}, closeDate = '';
+    $$('#pdPanel [data-pf]').forEach(function (cb) {
+      if (!cb.checked || cb.disabled) return;
+      var name = cb.dataset.pf;
+      if (name === '__close') { closeDate = pdCloseDate(); return; }
+      var sel = $('#pdPanel select[data-pv="' + name + '"]');
+      var val = sel ? sel.value : props[name];
+      if (!val || (Array.isArray(val) && !val.length)) return;
+      fields[name] = d.fields.filter(function (x) { return x.name === name; })[0].type === 'set' && !Array.isArray(val) ? [val] : val;
+    });
+    var pend = d.pending[0];
+    return {
+      dealId: String(d.deal.id),
+      fields: fields,
+      closeDate: closeDate,
+      today: { note: $('#pdNote').value.trim(), completeId: pend ? pend.id : null },
+      next: { date: f.recallDate.value || '', time: $('#pdTime').value || '', note: $('#pdNextNote').value.trim() }
+    };
+  }
+  function pdSummary(res) {
+    if (!res || !res.steps) return (res && res.message) || '파이프드라이브 기록 실패';
+    return Object.keys(PD_STEPS).map(function (k) {
+      var s = res.steps[k];
+      if (!s) return '';
+      if (!s.ok) return PD_STEPS[k] + ' 실패 (' + (s.message || s.code) + ')';
+      if (s.skipped && !s.before) return '';
+      return PD_STEPS[k] + ' 완료';
+    }).filter(Boolean).join(' / ');
+  }
+  // 기록 한 줄의 파이프드라이브 상태를 결과에 맞춘다. 성공한 단계는 다시 보낼 때 건너뛴다
+  function pdApply(rec, res) {
+    var done = (rec.pd.done || []).slice();
+    if (res && res.steps) Object.keys(res.steps).forEach(function (k) { if (res.steps[k].ok && done.indexOf(k) === -1) done.push(k); });
+    rec.pd.done = done;
+    rec.pd.status = res && res.ok ? 'sent' : 'pending';
+    rec.pd.error = res && res.ok ? '' : pdSummary(res);
+    rec.pd.at = Date.now();
+  }
+  function pdSendRec(rec) {
+    var body = Object.assign({ action: 'save', skip: rec.pd.done || [] }, rec.pd.payload);
+    return window.cloudFn ? window.cloudFn('pipedrive', body) : Promise.resolve({ ok: false, code: 'auth', message: '서버에 연결할 수 없습니다' });
+  }
+  function bindPd(f) {
+    $('#pdLoad').addEventListener('click', function () {
+      var id = pdDealId(f.dealId.value);
+      if (!id) { pdMsg('딜 ID를 넣어주세요', true); return; }
+      f.dealId.value = id;
+      pd.data = null;
+      $('#pdPanel').hidden = true;
+      $('#pdSend').hidden = true;
+      pdMsg('불러오는 중');
+      if (!window.cloudFn) { pdMsg('서버에 연결할 수 없습니다', true); return; }
+      window.cloudFn('pipedrive', { action: 'load', dealId: id }).then(function (res) {
+        if (!res || !res.ok) { pdMsg((res && res.message) || '불러오지 못했습니다', true); return; }
+        pd.data = res;
+        pdMsg('');
+        renderPdPanel();
+      });
+    });
+    f.dealId.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('#pdLoad').click(); }
+    });
+    f.addEventListener('input', pdSync);
+    f.addEventListener('change', pdSync);
+    $('#pdSend').addEventListener('click', function () {
+      if (pd.busy || !pd.data) return;
+      var rec = collectRec();
+      if (!rec) return;
+      var payload = pdPayload();
+      rec.pd = { dealId: payload.dealId, title: pd.data.deal.title || '', payload: payload, done: [], status: 'sending' };
+      pd.busy = true;
+      var btn = $('#pdSend');
+      btn.disabled = true;
+      btn.textContent = '기록하는 중';
+      pdSendRec(rec).then(function (res) {
+        pd.busy = false;
+        btn.disabled = false;
+        btn.textContent = '저장하고 파이프드라이브에 기록';
+        pdApply(rec, res);
+        // 실패해도 통화 기록은 남기고, 통화 기록 탭에서 다시 보낼 수 있게
+        commitRec(rec, res && res.ok ? '파이프드라이브에 기록했습니다' : '파이프드라이브 미전송: ' + rec.pd.error);
+      });
+    });
+  }
+  function pdResend(rec) {
+    if (!rec || !rec.pd || pd.busy) return;
+    pd.busy = true;
+    toast('파이프드라이브에 다시 보내는 중');
+    pdSendRec(rec).then(function (res) {
+      pd.busy = false;
+      pdApply(rec, res);
+      saveRecords();
+      renderLog();
+      toast(res && res.ok ? '파이프드라이브에 기록했습니다' : '파이프드라이브 미전송: ' + rec.pd.error);
+    });
+  }
+  // 직접 넣을 때 쓰는 내용 (노트, 넥스트 액션, 항목)
+  function pdCopyText(rec) {
+    var p = rec.pd.payload;
+    var lines = ['[딜 ' + p.dealId + '] ' + (rec.pd.title || ''), '', '오늘 통화 노트', p.today.note || '-'];
+    if (p.next.date) lines.push('', '넥스트 액션: ' + p.next.date + (p.next.time ? ' ' + p.next.time : '') + (p.next.note ? ' / ' + p.next.note : ''));
+    var f = Object.keys(p.fields || {});
+    if (f.length || p.closeDate) {
+      lines.push('', '딜 항목');
+      f.forEach(function (k) { lines.push('- ' + k + ': ' + (Array.isArray(p.fields[k]) ? p.fields[k].join(', ') : p.fields[k])); });
+      if (p.closeDate) lines.push('- 예상 완료 날짜: ' + p.closeDate);
+    }
+    return lines.join('\n');
   }
 
   // ---------- 통화 기록 목록 ----------
@@ -1830,14 +2088,15 @@
       var isDue = r.recallDate && r.recallDate <= t && r.next !== '종료';
       return '<tr data-id="' + r.id + '">' +
         '<td class="nowrap">' + fmtStamp(r.ts) + '</td>' +
-        '<td>' + esc(r.store || '-') + '</td>' +
+        '<td>' + esc(r.store || '-') + (r.pd ? '<span class="pd-tag' + (r.pd.status === 'sent' ? '' : ' is-bad') + '" title="' + esc(r.pd.error || '') + '">' + (r.pd.status === 'sent' ? '파이프드라이브 기록됨' : '파이프드라이브 미전송') + '</span>' : '') + '</td>' +
         '<td class="nowrap">' + esc(r.stage) + '</td>' +
         '<td><span class="s s-' + r.sens + '">' + r.sens + '</span></td>' +
         '<td>' + esc(reasons) + '</td>' +
         '<td class="nowrap">' + esc(r.next) + '</td>' +
         '<td class="nowrap' + (isDue ? ' due' : '') + '">' + esc(r.recallDate ? fmtKoDate(r.recallDate) : '') + '</td>' +
         '<td class="memo">' + esc(r.memo) + '</td>' +
-        '<td class="row-act"><button data-act="edit" type="button">수정</button><button data-act="del" type="button">삭제</button></td>' +
+        '<td class="row-act">' + (r.pd && r.pd.status !== 'sent' ? '<button data-act="pdsend" type="button">다시 보내기</button><button data-act="pdcopy" type="button">복사</button>' : '') +
+        '<button data-act="edit" type="button">수정</button><button data-act="del" type="button">삭제</button></td>' +
         '</tr>';
     }).join('');
     $('#logEmpty').style.display = rows.length ? 'none' : 'block';
@@ -1857,6 +2116,11 @@
       var rec = state.records.filter(function (r) { return r.id === id; })[0];
       if (!rec) return;
       if (b.dataset.act === 'edit') openDrawer(rec);
+      if (b.dataset.act === 'pdsend') pdResend(rec);
+      if (b.dataset.act === 'pdcopy') {
+        var txt = pdCopyText(rec);
+        (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('복사했습니다'); }, function () { window.prompt('복사해서 쓰세요', txt); });
+      }
       if (b.dataset.act === 'del') {
         if (!confirm((rec.store || '이 기록') + ' 기록을 삭제할까요?')) return;
         state.records = state.records.filter(function (r) { return r.id !== id; });

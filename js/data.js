@@ -219,6 +219,8 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능', qPos: true } },
+            // 이미 페이히어 포스를 쓰면 포스 세트도, 마스터 태블릿도 필요 없다 (파이프드라이브 매장 운영: 운영-셀러)
+            { label: '페이히어 포스 쓰고 있대요', to: 'h_info', set: { posNow: '페이히어 포스 사용', qPos: false, posOurs: true } },
             { label: '약정이 남았대요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '약정 남음', qPos: false } },
             { label: '연동 안 되는 포스 / 본사 지정', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '연동 확인 필요', qPos: false },
               say: '오케이포스, 이지포스, 유니온포스, 포스마스터는 연동돼요. 체리포스는 안 돼요. 본사 지정 포스는 주문만 받는 용도예요.' }
