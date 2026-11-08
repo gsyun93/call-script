@@ -179,8 +179,8 @@ window.TOOL_DATA = {
               { key: 'sCover', label: '커버형', note: '손님이 들고 봄' },
               { key: 'sWall', label: '벽걸이형', note: '벽에 설치' }
             ] },
-            { label: '주방 프린터', zero: true, say: '주방 프린터 따로 더 필요하실까요?',
-              sayNew: '주방 프린터는 몇 대 필요하세요? 음료·주류 나가는 곳이 따로면 보통 2대예요.',
+            { label: '주방 프린터', zero: true, say: '고객 주문이 올라오는 주방 프린터는 몇 대 필요하세요?',
+              sayNew: '고객 주문이 올라오는 주방 프린터는 몇 대 필요하세요?',
               items: [{ key: 'printers', label: '주방 프린터', note: '없으면 0', def: '0' }] }
           ],
           // 칸을 다 채우고 선불·후불을 고르면 끝
@@ -219,11 +219,7 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능', qPos: true } },
-            // 이미 페이히어 포스를 쓰면 포스 세트도, 마스터 태블릿도 필요 없다 (파이프드라이브 매장 운영: 운영-셀러)
-            { label: '페이히어 포스 쓰고 있대요', to: 'h_info', set: { posNow: '페이히어 포스 사용', qPos: false, posOurs: true } },
-            { label: '약정이 남았대요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '약정 남음', qPos: false } },
-            { label: '연동 안 되는 포스 / 본사 지정', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '연동 확인 필요', qPos: false },
-              say: '오케이포스, 이지포스, 유니온포스, 포스마스터는 연동돼요. 체리포스는 안 돼요. 본사 지정 포스는 주문만 받는 용도예요.' }
+            { label: '사용중인 포스가 있대요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '약정 남음', qPos: false } }
           ]
         },
         n4_free: {
@@ -240,8 +236,8 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '아직 없대요', to: 'n4_rec', set: { posNow: '미정, 페이히어 추천', qPos: true } },
-            { label: '알아본 데 있대요', to: 'n4_cmp', set: { posNow: '타사 검토 중', qPos: true } },
-            { label: '쓰던 포스 있대요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '쓰던 포스 있음', qPos: false } }
+            // 쓰던 포스를 그대로 쓰면 포스 금액 없이 마스터 태블릿 (운영 중 "사용중인 포스가 있대요"와 같은 방식)
+            { label: '사용중인게 있어요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '쓰던 포스 있음', qPos: false } }
           ]
         },
         n4_rec: {
@@ -369,7 +365,7 @@ window.TOOL_DATA = {
       nodes: {
         c1_run: {
           kind: 'say',
-          text: '영업에 지장 없게 설치 날짜부터 잡을게요. {n}대면 2시간 안쪽이에요. 언제가 편하세요?',
+          text: '네 그러면 통화 마치시고 신분증 사진찍어서 보내주시면 프로모션 혜택 우선 받으시고 설치 일정 선점 하실 수 있게 가계약 진행 도와드리겠습니다.',
           fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }],
           next: 'c3',
           nextLabel: '날짜 잡았어요',
@@ -380,7 +376,7 @@ window.TOOL_DATA = {
         },
         c1: {
           kind: 'say',
-          text: '주민번호 뒷자리 가리시고 신분증 사진만 카톡으로 보내주세요. 가계약서 바로 보내드릴게요.',
+          text: '네 그러면 통화 마치시고 신분증 사진찍어서 보내주시면 프로모션 혜택 우선 받으시고 설치 일정 선점 하실 수 있게 가계약 진행 도와드리겠습니다.',
           next: 'c2',
           nextLabel: '가계약 하겠대요',
           options: [

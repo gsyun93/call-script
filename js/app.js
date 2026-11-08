@@ -198,7 +198,7 @@
   }
   // 지금 쓰는 타사 포스를 그대로 쓰는 답이 나왔는지 (마스터 태블릿, "포스는 그대로" 멘트)
   function posKeep() {
-    return state.vars.qPos === false && !state.vars.posOurs;
+    return state.vars.qPos === false && !state.vars.posOurs && !/페이히어/.test(state.vars.posProg || '');
   }
   function isNewStore() { return state.vars.status === '오픈 준비 중'; }
   // 메뉴 사진: 오픈 준비 중 매장만, 따로 끄지 않았으면 넣는다
