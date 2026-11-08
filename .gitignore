@@ -2,3 +2,6 @@ raw/
 .env
 *.zip
 .claude/
+
+# 엔터프라이즈 기획 문서 (사내 자료 정리, 공개 저장소에 올리지 않음)
+enterprise/

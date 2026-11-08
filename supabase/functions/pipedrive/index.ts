@@ -11,7 +11,10 @@ const ALLOWED_USERS = ['569ada9e-74e3-4a97-adb0-c4399fd51451'];
 const TOKEN = Deno.env.get('PIPEDRIVE_TOKEN') || '';
 const API = 'https://api.pipedrive.com';
 // 툴에서 채우는 딜 항목 (이름으로 찾는다)
-const FIELD_NAMES = ['★리드 감도', '매장 운영 여부', '매장명', '테이블 수', '오픈예정일자', '업종', '[Product] 경쟁사', '사용 포스', '매장 운영'];
+const FIELD_NAMES = ['★리드 감도', '매장 운영 여부', '매장명', '테이블 수', '오픈예정일자', '업종', '[Product] 경쟁사', '사용 포스', '매장 운영',
+  // Enterprise (본사 딜)
+  'VAN', '[Ent] 현재 보유 가맹점 수', '[Ent] 최초 미팅 유형', '[Ent] 회의록 노션링크', '[Ent] VOC 주관부서', '[Ent] 제안 사업 구조',
+  '[Ent] 제안혜택', '[Ent] 도입 목표 일정', '[Ent] 소개서 및 자료 발송일자'];
 const ACTIVITY_NAME = '재컨택';
 
 const CORS = {
@@ -153,13 +156,29 @@ async function pendingRecontacts(dealId: number, typeKey: string) {
     .map((a: any) => ({ id: a.id, due_date: a.due_date, due_time: a.due_time, subject: a.subject, note: a.note || '' }));
 }
 
+// 딜의 파이프라인, 지금 단계, 바로 다음 단계
+async function stageInfo(deal: any) {
+  const pid = Number(deal.pipeline_id), sid = Number(deal.stage_id);
+  const [pl, st] = await Promise.all([pd('GET', '/v1/pipelines/' + pid), pd('GET', '/v1/stages?pipeline_id=' + pid)]);
+  const stages = ((st.json && st.json.data) || []).filter((s: any) => s.active_flag !== false)
+    .sort((a: any, b: any) => (a.order_nr || 0) - (b.order_nr || 0));
+  const i = stages.findIndex((s: any) => Number(s.id) === sid);
+  const pick = (s: any) => s ? { id: Number(s.id), name: s.name } : null;
+  return {
+    pipeline: { id: pid, name: (pl.json && pl.json.data && pl.json.data.name) || '' },
+    stage: pick(stages[i]),
+    nextStage: i >= 0 ? pick(stages[i + 1]) : null,
+  };
+}
+
 // ---------- load ----------
 async function actionLoad(dealId: number) {
   const { deal, owner } = await checkOwner(dealId);
-  const [fields, typeKey] = await Promise.all([dealFields(), activityTypeKey()]);
+  const [fields, typeKey, si] = await Promise.all([dealFields(), activityTypeKey(), stageInfo(deal)]);
   const pending = await pendingRecontacts(dealId, typeKey);
   return {
     ok: true,
+    ...si,
     deal: { id: deal.id, title: deal.title, status: deal.status, owner: owner.name, expected_close_date: deal.expected_close_date || '' },
     fields: FIELD_NAMES.filter((n) => fields[n]).map((n) => {
       const f = fields[n];
@@ -269,6 +288,18 @@ async function saveNext(dealId: number, typeKey: string, next: any) {
   );
   return { ok: true, id: a && a.id };
 }
+// 단계 이동: 바로 다음 단계로만 (다른 단계 번호가 오면 막는다)
+async function saveStage(dealId: number, deal: any, moveStage: any) {
+  const target = Number(moveStage);
+  if (!target) return { ok: true, skipped: true };
+  const si = await stageInfo(deal);
+  if (!si.nextStage || si.nextStage.id !== target) throw new PdError('api', '다음 단계가 아니어서 옮기지 않았습니다');
+  await withFallback(
+    () => pdOk('PUT', '/v1/deals/' + dealId, { stage_id: target }),
+    () => pdOk('PATCH', '/api/v2/deals/' + dealId, { stage_id: target }),
+  );
+  return { ok: true, stage: si.nextStage.name };
+}
 async function actionSave(dealId: number, p: any) {
   const { deal } = await checkOwner(dealId);
   const skip: string[] = Array.isArray(p.skip) ? p.skip : [];
@@ -279,6 +310,7 @@ async function actionSave(dealId: number, p: any) {
     ['fields', () => saveFields(dealId, deal, p.fields || {}, p.closeDate, Array.isArray(p.overwrite) ? p.overwrite : [], p.setMode === 'replace' ? 'replace' : 'merge')],
     ['today', () => saveToday(dealId, typeKey, p.today)],
     ['next', () => saveNext(dealId, typeKey, p.next)],
+    ['stage', () => saveStage(dealId, deal, p.moveStage)],
   ] as [string, () => Promise<any>][]) {
     if (skip.includes(name)) { steps[name] = { ok: true, skipped: true, before: true }; continue; }
     try {

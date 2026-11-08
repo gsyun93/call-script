@@ -81,6 +81,41 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .top-zone { position: fixed; top: 0; left: 0; right: 0; height: 14px; z-index: 21; }
 .top-zone:hover + .top, .top:hover, .top:focus-within { transform: none; box-shadow: 0 8px 24px rgba(28, 38, 56, .10); }
 .brand { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+/* Enterprise Mode 스위치 */
+.mode-sw { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; cursor: pointer; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; }
+.mode-sw input { accent-color: var(--ink); }
+body.ent .mode-sw { background: var(--ink); color: #fff; border-color: var(--ink); }
+/* Enterprise 띠 */
+.ent-band { display: flex; align-items: center; gap: 8px; padding: 8px 40px; background: var(--ink); color: #fff; font-size: 13px; }
+.ent-band b { letter-spacing: .02em; }
+.ent-band span { opacity: .85; }
+.ent-band .band-btn { margin-left: auto; border: 1px solid rgba(255,255,255,.4); background: transparent; color: #fff; border-radius: 999px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
+body.ent .qbar { top: 37px; }
+/* 도움말 말풍선 */
+.tipbox { position: fixed; z-index: 100; max-width: 320px; padding: 9px 12px; border-radius: 10px; background: var(--ink); color: #fff; font-size: 13px; line-height: 1.55; box-shadow: 0 8px 24px rgba(28,38,56,.25); pointer-events: none; white-space: pre-line; }
+body.ent [data-tip] { cursor: help; }
+body.ent button[data-tip], body.ent .choice[data-tip], body.ent .tile[data-tip] { cursor: pointer; }
+.scene-tag[data-tip] { text-decoration: underline dotted; text-underline-offset: 4px; }
+/* 확인 체크 */
+.checks { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 16px; padding: 12px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; }
+.chk { display: flex; gap: 8px; align-items: flex-start; font-size: 15px; color: var(--ink); cursor: pointer; }
+.chk input { margin-top: 4px; }
+/* 가격 단계 판정 */
+.tier-judge .tier { padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.tier b { margin-right: 8px; }
+.tier-n { font-size: 13px; color: var(--muted); }
+.tier.is-ok .tier-n { color: var(--accent); font-weight: 700; }
+.tier-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tier-i { font-size: 13px; padding: 3px 10px; border-radius: 999px; background: var(--chip); color: var(--ink-2); display: inline-flex; gap: 4px; align-items: center; }
+.tier-i.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+/* 미팅·가이드 */
+.ent-sec table th { text-align: left; width: 28%; font-weight: 600; color: var(--ink-2); vertical-align: top; padding: 8px 10px; }
+.ent-sec table td { padding: 8px 10px; }
+.min-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.min-grid textarea { width: 100%; font-size: 14px; padding: 8px 10px; border-radius: 10px; resize: vertical; }
+.min-act { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+.pd-warn { margin: 0; font-size: 13px; color: var(--s-mid); font-weight: 600; }
+@media (max-width: 700px) { .min-grid { grid-template-columns: 1fr; } .ent-band { padding: 8px 16px; } }
 .brand strong { font-size: 15px; }
 .brand .muted { font-size: 12px; }
 

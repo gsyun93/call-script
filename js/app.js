@@ -19,6 +19,28 @@
     }
   };
 
+  // ---------- Enterprise Mode ----------
+  // 엔터프라이즈 자료(본사 스크립트, 가격 단계, 가이드)는 로그인하면 서버에서 받아 둔 것만 쓴다
+  var MODE = store.get('mode', 'smb');
+  var ENTD = MODE === 'ent' ? store.get('ent_data', null) : null;
+  if (ENTD && ENTD.steps) D = buildEnt(window.TOOL_DATA, ENTD);
+  function buildEnt(smb, e) {
+    var base = JSON.parse(JSON.stringify(smb));
+    // 가맹점 통화는 매장 영업 흐름을 그대로 쓰고, 오프닝에 가맹점 인사를 더한다
+    var open = base.steps.filter(function (s) { return s.id === 'open'; })[0];
+    if (open && e.franchise) Object.keys(e.franchise.nodes).forEach(function (k) { open.nodes[k] = e.franchise.nodes[k]; });
+    base.ent = true;
+    base.steps = e.steps.concat(base.steps);
+    base.objections = (e.objections || []).concat(base.objections);
+    base.prices = e.prices || base.prices;
+    base.messages = (e.messages || []).concat(base.messages);
+    base.meeting = e.meeting;
+    base.guide = e.guide;
+    base.tabTips = e.tabTips || {};
+    base.entPd = e.pd || {};
+    return base;
+  }
+
   // 페이지를 열 때마다 새 통화로 시작한다 (저장 안 한 입력값은 남기지 않음)
   ['step', 'vars', 'paths', 'answers', 'hist'].forEach(function (k) {
     try { localStorage.removeItem('callscript.' + k); } catch (e) { /* 무시 */ }
@@ -286,7 +308,7 @@
       time: fmtKoTime(v.time)
     };
   }
-  var varLabels = { name: '내 이름', store: '매장명', region: '지역', source: '유입 경로', n: '대수', free: '무상 대수', paid: '유료 대수', table: '테이블오더 월 금액', unit: '대당 금액', total: '월 합계', open: '오픈일', date: '날짜', time: '시간' };
+  var varLabels = { brand: '브랜드', media: '찾은 곳', place: '장소', referrer: '소개해 준 곳', stores: '가맹점 수', expandN: '신규 오픈 수', unitsPerStore: '매장당 대수', rivalEtc: '비딩 경쟁사', meetType: '미팅 유형', name: '내 이름', store: '매장명', region: '지역', source: '유입 경로', n: '대수', free: '무상 대수', paid: '유료 대수', table: '테이블오더 월 금액', unit: '대당 금액', total: '월 합계', open: '오픈일', date: '날짜', time: '시간' };
   // 비어 있으면 자리표시 없이 그냥 빼는 값
   var optionalVars = { freeLine: true, benefits: true, posLine: true, powerLine: true, standLine: true, printerLine: true };
 
@@ -311,6 +333,11 @@
   // html: 값은 강조, 비어 있으면 [라벨]
   function fill(text, asHtml) {
     var vals = varValues();
+    // varValues에 없는 값(브랜드, 장소 등)은 입력한 값 그대로
+    text.replace(/\{([a-zA-Z0-9-]+)\}/g, function (m, k) {
+      if (vals[k] === undefined && state.vars[k] != null && typeof state.vars[k] !== 'object') vals[k] = String(state.vars[k]);
+      return m;
+    });
     if (!asHtml) {
       return text.replace(/\{([a-zA-Z0-9-]+)\}/g, function (m, k) {
         if (optionalVars[k]) return vals[k] || '';
@@ -326,6 +353,29 @@
 
   // ---------- 상단 ----------
   function renderHeader() {
+    document.body.classList.toggle('ent', !!D.ent);
+    var sw = $('#modeSw input');
+    sw.checked = !!D.ent;
+    sw.addEventListener('change', function () {
+      if (sw.checked && !store.get('ent_data', null)) {
+        sw.checked = false;
+        toast('엔터프라이즈 자료를 받지 못했습니다. 로그인 후 다시 켜주세요');
+        return;
+      }
+      store.set('mode', sw.checked ? 'ent' : 'smb');
+      location.reload();
+    });
+    $('#modeSw').dataset.tip = '프랜차이즈 본사 영업 화면으로 바꿉니다. 매장 대표님 통화(SMB)는 끄고 쓰세요.';
+    $$('.ent-only').forEach(function (b) { b.hidden = !D.ent; });
+    if (D.ent) {
+      $('.tab[data-tab="price"]').textContent = '가격 정책';
+      $('.tab[data-tab="msg"]').textContent = '문구';
+      $$('.tab').forEach(function (b) { if (D.tabTips[b.dataset.tab]) b.dataset.tip = D.tabTips[b.dataset.tab]; });
+      $('#priceLead').textContent = '프랜차이즈 전용 가격 정책 단계입니다. 단계마다 조건 2개 이상 충족해야 합니다. 스크립트 본사 현황에서 넣은 값으로 위쪽 판정이 바뀝니다. 최신 단가·수수료는 가격 정책표(구글 시트)로 확인하세요.';
+      renderMeeting();
+      renderGuide();
+    }
+    bindTips();
     $('#baseDate').textContent = '금액 기준 ' + D.priceBaseDate;
     $('#me').textContent = D.myName + ' 매니저';
     $$('.tab').forEach(function (b) {
@@ -651,13 +701,14 @@
     if (!list.length) return '';
     return '<div class="fields">' + list.map(function (f) {
       var v = state.vars[f.key] || '';
+      var tipA = f.tip ? ' data-tip="' + esc(f.tip) + '"' : '';
       if (f.type === 'date' || f.type === 'time') {
         var disp = f.type === 'date' ? shortDate(v) : v;
-        return '<label class="field"><span>' + esc(f.label) + '</span><input type="text" autocomplete="off" data-var="' + f.key + '" data-kind="' + f.type + '"' +
+        return '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><input type="text" autocomplete="off" data-var="' + f.key + '" data-kind="' + f.type + '"' +
           ' placeholder="' + (f.type === 'date' ? '예: 10/28, 내일' : '예: 3시, 15:30') + '" value="' + esc(disp) + '"></label>';
       }
-      return '<label class="field"><span>' + esc(f.label) + '</span><input type="' + f.type + '" data-var="' + f.key + '"' +
-        (f.type === 'number' ? ' min="1" max="99" inputmode="numeric"' : '') +
+      return '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><input type="' + f.type + '" data-var="' + f.key + '"' +
+        (f.type === 'number' ? ' min="0" inputmode="numeric"' : '') +
         ' value="' + esc(v) + '"></label>';
     }).join('') + '</div>';
   }
@@ -877,7 +928,8 @@
 
   function renderCard(s, cur, curId) {
     var p = stepPath(s);
-    var html = cur.label && cur.kind === 'ask' ? '<p class="scene-tag">' + esc(cur.label) + '</p>' : '';
+    var html = cur.label && cur.kind === 'ask' ? '<p class="scene-tag"' + (D.ent && cur.tip ? ' data-tip="' + esc(cur.tip) + '"' : '') + '>' + esc(cur.label) + '</p>'
+      : D.ent && cur.tip ? '<p class="scene-tag" data-tip="' + esc(cur.tip) + '">' + esc(cur.label || '이 단계는?') + '</p>' : '';
     if (cur.calc || cur.summary) html += '<div class="summary-wrap" id="summaryBox">' + renderSummary() + '</div>';
     // 버튼 없이 끝나는 화면(재통화 예정일 등)은 읽을 멘트를 카드로
     if (cur.text && !cur.next && !(cur.options || []).length) {
@@ -886,6 +938,11 @@
     }
     html += cur.calc ? renderCalc() : renderFields(sceneFields(s, cur));
     if (cur.form) html += renderForm(s, cur, curId);
+    // 넘어가기 전에 확인할 것 (체크만, 막지는 않음)
+    if (cur.checks) html += '<div class="checks">' + cur.checks.map(function (c, i) {
+      var k = 'chk.' + curId + '.' + i;
+      return '<label class="chk"><input type="checkbox" data-chk="' + k + '"' + (state.vars[k] ? ' checked' : '') + '>' + esc(c) + '</label>';
+    }).join('') + '</div>';
     if (cur.refs) html += '<div class="refs top">' + cur.refs.map(function (r) {
       var key = 'obj.' + r.obj + '.0';
       return '<div class="ref-card" data-edit="' + key + '" title="꾹 누르면 수정"><b>' + esc(r.label) + '</b>' + sayHtml({ key: key, text: objText(r.obj, 0) }) + '</div>';
@@ -1046,6 +1103,9 @@
   function renderQBar() {
     var bar = $('#qbar');
     if (!bar) return;
+    bar.hidden = !!(D.ent && state.vars.entKind !== '가맹점');
+    renderEntBand();
+    if (bar.hidden) return;
     if (!$('[data-qn]', bar)) {
       bar.innerHTML =
         '<span class="qb-item"><span class="qb-lab">대수</span>' +
@@ -1172,6 +1232,10 @@
       });
     });
     bindCalc(box);
+    $$('[data-chk]', box).forEach(function (c) {
+      c.addEventListener('change', function () { state.vars[c.dataset.chk] = c.checked; saveVars(); });
+    });
+    if (D.ent) markTips(box, s, cur);
     $$('[data-fv]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         state.vars[inp.dataset.fv] = inp.value;
@@ -1290,6 +1354,188 @@
     // 묶음 멘트, 안내 카드도 꾹 눌러 수정
     $$('.fg-say[data-edit], .ref-card[data-edit]', box).forEach(function (el) {
       bindLongPress(el, function () { editLine(el.dataset.edit); });
+    });
+  }
+
+  // ---------- Enterprise: 띠, 도움말, 미팅·가이드·가격 ----------
+  function renderEntBand() {
+    var b = $('#entBand');
+    if (!b) return;
+    b.hidden = !D.ent;
+    if (!D.ent) return;
+    var off = store.get('tipsOff', false);
+    b.innerHTML = '<b>Enterprise Mode</b>' + (state.vars.entKind ? '<span>· ' + esc(state.vars.entKind) + '</span>' : '') +
+      (state.vars.brand ? '<span>· ' + esc(state.vars.brand) + '</span>' : '') +
+      '<button type="button" class="band-btn" id="tipsToggle">' + (off ? '도움말 켜기' : '도움말 끄기') + '</button>';
+    $('#tipsToggle').onclick = function () { store.set('tipsOff', !off); renderEntBand(); };
+  }
+  // 스크립트 버튼·카드에 도움말 붙이기 (데이터의 tip)
+  function markTips(box, s, cur) {
+    $$('[data-oi]', box).forEach(function (el) {
+      var o = cur.options && cur.options[Number(el.dataset.oi)];
+      if (o && o.tip) el.dataset.tip = o.tip;
+    });
+    $$('[data-ci]', box).forEach(function (el) {
+      var n = s.nodes[cur.choices[Number(el.dataset.ci)]];
+      if (n && n.tip) el.dataset.tip = n.tip;
+    });
+    $$('[data-nx]', box).forEach(function (el) {
+      var r = resolve(cur.next);
+      var t = cur.nextTip || (r && r.node.tip);
+      if (t) el.dataset.tip = t;
+    });
+  }
+  // 마우스를 올리고 잠깐 있으면 말풍선
+  var tipTimer = null;
+  function bindTips() {
+    var tb = $('#tipBox');
+    function hide() { clearTimeout(tipTimer); tb.hidden = true; }
+    document.addEventListener('mouseover', function (e) {
+      var el = e.target.closest && e.target.closest('[data-tip]');
+      clearTimeout(tipTimer);
+      if (!el || !D.ent || store.get('tipsOff', false)) { tb.hidden = true; return; }
+      tipTimer = setTimeout(function () {
+        tb.textContent = el.dataset.tip;
+        tb.hidden = false;
+        var r = el.getBoundingClientRect(), w = tb.offsetWidth, h = tb.offsetHeight;
+        var x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+        var y = r.top - h - 8;
+        if (y < 8) y = r.bottom + 8;
+        tb.style.left = x + 'px';
+        tb.style.top = y + 'px';
+      }, 400);
+    });
+    document.addEventListener('mouseout', function (e) {
+      if (e.target.closest && e.target.closest('[data-tip]') && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-tip]') === e.target.closest('[data-tip]'))) hide();
+    });
+    window.addEventListener('scroll', hide, true);
+    document.addEventListener('mousedown', hide);
+  }
+  // 메모용: 엔터프라이즈 입력칸
+  function entMemo() {
+    var v = state.vars, out = [];
+    if (v.entKind) out.push('구분: ' + v.entKind + (v.brand ? ' / ' + v.brand : ''));
+    if (v.media) out.push('찾은 곳: ' + v.media);
+    if (v.meetType) out.push('미팅 유형: ' + v.meetType + (v.place ? ' / ' + v.place : ''));
+    var seen = {};
+    D.steps.forEach(function (st) {
+      if (st.id !== 'hq') return;
+      Object.keys(st.nodes).forEach(function (id) {
+        (st.nodes[id].fields || []).forEach(function (f) {
+          if (seen[f.key] || f.key === 'date' || f.key === 'time' || f.key === 'place') return;
+          seen[f.key] = true;
+          var x = v[f.key];
+          if (x == null || x === '') return;
+          out.push(f.label + ': ' + (f.type === 'date' ? fmtKoDate(x) : x));
+        });
+      });
+    });
+    return out;
+  }
+  function nextMonthFirst() {
+    var d = new Date();
+    d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-01';
+  }
+  // 결과 기록에 보여줄 항목: 본사 딜은 지금 단계에 기재할 것만, 가맹점 딜은 매장 영업과 같게
+  function entPdFields(d, isHq) {
+    if (!D.ent) return d.fields.filter(function (f) { return SMB_PD.indexOf(f.name) !== -1; });
+    if (!isHq) return d.fields.filter(function (f) { return SMB_PD.indexOf(f.name) !== -1; });
+    var P = D.entPd || {}, stage = d.stage ? d.stage.name : '';
+    var names = (P.always || []).concat((P.stageFields || {})[stage] || []);
+    var props = pdProposals(d.fields);
+    (P.extra || []).forEach(function (n) { var p = props[n]; if (p && (!Array.isArray(p) || p.length)) names.push(n); });
+    // 통화에서 값을 받은 엔터프라이즈 항목도 같이
+    ['[Ent] 현재 보유 가맹점 수', '[Ent] 최초 미팅 유형', '사용 포스', 'VAN', '[Product] 경쟁사'].forEach(function (n) { var p = props[n]; if (p && (!Array.isArray(p) || p.length)) names.push(n); });
+    return d.fields.filter(function (f) { return names.indexOf(f.name) !== -1; });
+  }
+  var SMB_PD = ['★리드 감도', '매장 운영 여부', '매장명', '테이블 수', '오픈예정일자', '업종', '[Product] 경쟁사', '사용 포스', '매장 운영'];
+
+  // 가격 정책: 본사 현황 값으로 단계 판정
+  function tierCheck() {
+    var v = state.vars, n = function (k) { return parseFloat(v[k]) || 0; };
+    return [
+      { name: '1단계', items: [['A 매장당 12대 이상', n('unitsPerStore') >= 12], ['B 도입 가능 매장 2개 이상', n('stores') >= 2], ['C 월 매출 2,500만원 이상', n('sales') >= 2500], ['D 업력 6개월 이상', n('years') >= 6], ['E 브랜드 1개 이상', n('brands') >= 1], ['F 직영점 1년 이상', n('directMonths') >= 12]] },
+      { name: '2단계', items: [['A 매장당 16대 이상', n('unitsPerStore') >= 16], ['B 업력 12개월 이상', n('years') >= 12], ['C 브랜드 3개 이상', n('brands') >= 3], ['D 본사 지정 포스를 페이히어로 변경', !!v.tierPosChange, 'tierPosChange']] },
+      { name: '3단계', items: [['A 본사 수수료 미지급', !!v.tierNoFee, 'tierNoFee'], ['B 매장당 20대 이상', n('unitsPerStore') >= 20], ['C 매장 5개 이상', n('stores') >= 5]] }
+    ];
+  }
+  function renderEntPrices() {
+    var box = $('#priceTables');
+    var html = '<div class="ptable tier-judge"><h3 data-tip="스크립트 \'본사 현황\'에서 넣은 가맹점 수, 매장당 대수, 매출, 업력, 브랜드 수로 자동 판정합니다. 품의서 체크용 참고이고, 고객에게는 1단계 요약만 말합니다.">이 본사 단계 판정' +
+      (state.vars.brand ? ' · ' + esc(state.vars.brand) : '') + '</h3>' +
+      tierCheck().map(function (t) {
+        var ok = t.items.filter(function (i) { return i[1]; }).length;
+        return '<div class="tier' + (ok >= 2 ? ' is-ok' : '') + '"><b>' + t.name + '</b><span class="tier-n">' + ok + '개 충족' + (ok >= 2 ? ' · 적용 가능' : '') + '</span><div class="tier-items">' +
+          t.items.map(function (i) {
+            return i[2] ? '<label class="tier-i' + (i[1] ? ' on' : '') + '"><input type="checkbox" data-tv="' + i[2] + '"' + (i[1] ? ' checked' : '') + '>' + esc(i[0]) + '</label>'
+              : '<span class="tier-i' + (i[1] ? ' on' : '') + '">' + esc(i[0]) + '</span>';
+          }).join('') + '</div></div>';
+      }).join('') + '</div>';
+    html += D.prices.map(function (g, gi) {
+      return '<div class="ptable"><h3>' + esc(g.group) + '</h3><table><tbody>' +
+        g.rows.map(function (r, ri) { return '<tr>' + priceCell(gi, ri, 0, r[0]) + priceCell(gi, ri, 1, r[1]) + priceCell(gi, ri, 2, r[2]) + '</tr>'; }).join('') +
+        '</tbody></table>' + (g.note ? '<div class="pnote">' + esc(g.note) + '</div>' : '') + '</div>';
+    }).join('');
+    box.innerHTML = html;
+    $$('[data-tv]', box).forEach(function (c) {
+      c.addEventListener('change', function () { state.vars[c.dataset.tv] = c.checked; saveVars(); renderEntPrices(); });
+    });
+    $$('[data-pk]', box).forEach(function (td) {
+      td.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); td.blur(); } });
+      td.addEventListener('blur', function () {
+        var v = td.textContent.trim();
+        if (v === td.dataset.orig) delete state.edits[td.dataset.pk];
+        else state.edits[td.dataset.pk] = v;
+        td.classList.toggle('is-edited', state.edits[td.dataset.pk] != null);
+        saveEdits();
+      });
+    });
+  }
+  // 섹션 그리기 (체크 목록 또는 2칸 표)
+  function sectionHtml(sec) {
+    return '<div class="ptable ent-sec"><h3' + (sec.tip ? ' data-tip="' + esc(sec.tip) + '"' : '') + '>' + esc(sec.title) + '</h3>' +
+      (sec.check ? '<div class="checks">' + sec.check.map(function (c) { return '<label class="chk"><input type="checkbox">' + esc(c) + '</label>'; }).join('') + '</div>' : '') +
+      (sec.rows ? '<table><tbody>' + sec.rows.map(function (r) { return '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
+      '</div>';
+  }
+  function renderGuide() {
+    $('#guideBox').innerHTML = '<p class="lead">노션 [온보딩] Enterprise Part 플레이북 요약입니다(기준 2026-11). 정책·수치는 바뀔 수 있어서 고객 안내 전에 원문을 확인하세요.</p>' +
+      D.guide.sections.map(sectionHtml).join('');
+  }
+  function renderMeeting() {
+    var M = D.meeting;
+    var html = '<p class="lead">미팅 전 준비, 진행 순서, 회의록을 여기서 합니다. 회의록은 미팅 당일 작성하고 노션에 붙여넣은 뒤, 노션 링크를 파이프드라이브 [Ent] 회의록 노션링크에 넣습니다.</p>';
+    html += '<div class="ptable ent-sec minutes"><h3 data-tip="본사 현황, 미팅 일정에서 넣은 값은 자동으로 들어갑니다. 요청 기능은 전제조건과 참고의견을 꼭 나눠 적습니다.">회의록</h3><div class="min-grid">' +
+      M.minutes.map(function (m) {
+        return '<label class="field" data-tip="' + esc(m.tip || '') + '"><span>' + esc(m.label) + '</span><textarea rows="2" data-min="' + m.key + '"></textarea></label>';
+      }).join('') + '</div><div class="min-act"><button type="button" class="btn-ghost" id="minFill">스크립트 값 불러오기</button><button type="button" class="btn" id="minCopy">회의록 복사</button></div></div>';
+    html += M.sections.map(sectionHtml).join('');
+    var box = $('#meetingBox');
+    box.innerHTML = html;
+    function autofill(force) {
+      M.minutes.forEach(function (m) {
+        var ta = $('[data-min="' + m.key + '"]', box);
+        var saved = state.vars['min.' + m.key];
+        if (saved != null && !force) { ta.value = saved; return; }
+        if (m.auto && (force || !ta.value)) {
+          var t = fill(m.auto, false);
+          ta.value = /\[/.test(t) ? t.replace(/\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim() : t;
+        }
+      });
+    }
+    autofill(false);
+    $$('[data-min]', box).forEach(function (ta) {
+      ta.addEventListener('input', function () { state.vars['min.' + ta.dataset.min] = ta.value; saveVars(); });
+    });
+    $('#minFill', box).addEventListener('click', function () { autofill(true); });
+    $('#minCopy', box).addEventListener('click', function () {
+      var lines = ['[미팅] ' + (state.vars.brand || '')];
+      M.minutes.forEach(function (m, i) {
+        var v = $('[data-min="' + m.key + '"]', box).value.trim();
+        if (v) lines.push((i + 1) + '. ' + m.label + ': ' + v);
+      });
+      copyText(lines.join('\n'));
     });
   }
 
@@ -1518,6 +1764,7 @@
   // 결과 기록 매장명: 매장명이 있으면 매장명(지역), 없으면 지역·업종으로 만든다
   function autoStoreName() {
     var v = state.vars;
+    if (D.ent && v.brand) return v.brand + (v.entKind === '본사' ? ' 본사' : '');
     if (v.store) return v.store + (v.region ? ' (' + v.region + ')' : '');
     var name = [v.region, v.biz].filter(Boolean).join(' ');
     if (name && v.status === '오픈 준비 중') name += ' 오픈 준비';
@@ -1545,7 +1792,8 @@
         });
       });
     });
-    if (posDetail()) lines.push('쓰던 포스: ' + posDetail());
+    if (posDetail() && !(D.ent && state.vars.entKind === '본사')) lines.push('쓰던 포스: ' + posDetail());
+    if (D.ent) entMemo().forEach(function (l) { if (lines.indexOf(l) === -1) lines.push(l); });
     D.objections.forEach(function (ob) {
       var a = (state.answers['obj.' + ob.id] || '').trim();
       if (a) lines.push(ob.title + ': ' + a);
@@ -1615,13 +1863,14 @@
   // ---------- 금액표 ----------
   // 칸을 눌러 바로 고친다. 고친 값은 이 브라우저에 저장 (키: price.그룹.줄.칸)
   function priceCell(gi, ri, ci, orig) {
-    var key = 'price.' + gi + '.' + ri + '.' + ci;
+    var key = (D.ent ? 'eprice.' : 'price.') + gi + '.' + ri + '.' + ci;
     var v = state.edits[key] != null ? state.edits[key] : orig;
     return '<td contenteditable="true" spellcheck="false" data-pk="' + key + '" data-orig="' + esc(orig) + '"' +
       (state.edits[key] != null ? ' class="is-edited"' : '') + '>' + esc(v) + '</td>';
   }
 
   function renderPrices() {
+    if (D.ent) { renderEntPrices(); return; }
     var P = prices();
     var unit = [['post', '후불형 대당 월'], ['pre', '선불형 대당 월'], ['pos', '포스·단말기·프린터 세트 월']];
     var html = '<div class="ptable"><h3>견적 계산 단가</h3><div class="unit-row">' +
@@ -1822,7 +2071,7 @@
   // ---------- 파이프드라이브 기록 ----------
   // 딜 ID로 불러와서(담당자 확인) 항목 채우기, 오늘 통화(완료), 넥스트 액션(미완료)을 한 번에 보낸다
   var pd = { data: null, busy: false, noteTouched: false };
-  var PD_STEPS = { fields: '딜 항목', today: '오늘 통화', next: '넥스트 액션' };
+  var PD_STEPS = { fields: '딜 항목', today: '오늘 통화', next: '넥스트 액션', stage: '단계 이동' };
   function pdDealId(v) {
     var s = String(v || '');
     var m = s.match(/deal\/(\d+)/);
@@ -1881,6 +2130,14 @@
     var ours = v.posOurs || /페이히어/.test(v.posProg || '');
     if (isNew) p['매장 운영'] = '신규';
     else if (running) p['매장 운영'] = ours ? '운영-셀러' : '운영-타포스';
+    if (D.ent && v.entKind === '본사') {
+      if (v.stores) p['[Ent] 현재 보유 가맹점 수'] = String(v.stores);
+      if (v.meetType) p['[Ent] 최초 미팅 유형'] = findOpt(opt['[Ent] 최초 미팅 유형'] || [], v.meetType) || v.meetType;
+      if (v.mailAsked) p['[Ent] 소개서 및 자료 발송일자'] = today();
+      p['VAN'] = findOpt(opt['VAN'] || [], v.posVan);
+      p['업종'] = findOpt(opt['업종'] || [], v.bizType || v.biz);
+      p['사용 포스'] = findOpt(opt['사용 포스'] || [], v.posProg);
+    }
     return p;
   }
   function pdCloseDate() {
@@ -1958,7 +2215,14 @@
     html += '</div>';
     $('#pdPanel').innerHTML = html;
     var box = $('#pdFields');
-    d.fields.forEach(function (fd) {
+    var isHq = D.ent && d.pipeline && /본사/.test(d.pipeline.name || '');
+    if (D.ent && d.pipeline) {
+      var want = state.vars.entKind, got = isHq ? '본사' : /가맹점/.test(d.pipeline.name) ? '가맹점' : d.pipeline.name;
+      var note = '<p class="pd-sub">파이프라인 ' + esc(d.pipeline.name) + ' · 지금 단계 ' + esc(d.stage ? d.stage.name : '-') + '</p>';
+      if (want && want !== got) note += '<p class="pd-warn">처음에 고른 것은 ' + esc(want) + '인데, 이 딜은 ' + esc(d.pipeline.name) + ' 딜입니다. 이 딜 기준으로 보여줍니다.</p>';
+      box.insertAdjacentHTML('beforebegin', note);
+    }
+    entPdFields(d, isHq).forEach(function (fd) {
       var cur = fd.current;
       var prop = fd.name === '★리드 감도' ? sens : props[fd.name];
       var val;
@@ -1980,20 +2244,30 @@
       box.appendChild(row);
       pdRowNote(row);
     });
-    // 예상 완료 날짜 (오픈·도입 예정일)
-    var cd = pdCloseDate(), crow = document.createElement('div');
+    // 예상 완료 날짜 (오픈·도입 예정일). 본사 딜은 클로징 목표일(비어 있으면 익월 1일)
+    var cd = isHq ? (d.deal.expected_close_date ? '' : nextMonthFirst()) : pdCloseDate(), crow = document.createElement('div');
     crow.className = 'pd-f';
     crow._close = true;
-    crow.innerHTML = '<input type="checkbox" data-pf="__close"' + (cd && cd !== d.deal.expected_close_date ? ' checked' : '') + '><b>예상 완료 날짜</b>' +
+    crow.innerHTML = '<input type="checkbox" data-pf="__close"' + (cd && cd !== d.deal.expected_close_date ? ' checked' : '') + '><b' + (isHq ? ' data-tip="목표일 설정이 어렵거나 없으면 익월 1일로 기입합니다. 바꾸면 [BO] 목표일 변동 사유를 기록해야 합니다."' : '') + '>' + (isHq ? '클로징 목표일' : '예상 완료 날짜') + '</b>' +
       '<input type="date" data-pv="__close" value="' + esc(cd || d.deal.expected_close_date || '') + '"><small></small>';
     box.appendChild(crow);
     pdRowNote(crow);
+    // 단계 이동: 다음 단계 하나만, 체크해야 옮긴다
+    if (D.ent && d.nextStage) {
+      var srow = document.createElement('div');
+      srow.className = 'pd-f pd-stage';
+      srow._stage = d.nextStage;
+      srow.innerHTML = '<input type="checkbox" data-pf="__stage"><b data-tip="파이프드라이브 단계를 다음 단계로 옮깁니다. 이번 통화로 다음 단계 조건을 채웠을 때만 체크하세요(가이드 탭의 단계 기준).">단계 이동</b>' +
+        '<span class="pd-val">' + esc(d.stage ? d.stage.name : '') + ' → ' + esc(d.nextStage.name) + '</span><small>체크하면 옮김</small>';
+      box.appendChild(srow);
+    }
 
     $('#pdPanel').hidden = false;
     $('#pdSend').hidden = false;
     $('#pdNote').addEventListener('input', function () { pd.noteTouched = true; });
     // 값을 바꾸면 그 줄을 체크하고 안내를 다시
     $$('.pd-f', box).forEach(function (row) {
+      if (row._stage) return;
       var cb = $('[data-pf]', row);
       function changed() {
         var v = row._close ? $('[data-pv="__close"]', row).value : pdValueOf(row._fd.name);
@@ -2051,10 +2325,11 @@
   }
   function pdPayload() {
     var f = $('#recordForm'), d = pd.data;
-    var fields = {}, overwrite = [], closeDate = '';
+    var fields = {}, overwrite = [], closeDate = '', moveStage = null;
     $$('#pdFields .pd-f').forEach(function (row) {
       var cb = $('[data-pf]', row);
       if (!cb.checked) return;
+      if (row._stage) { moveStage = row._stage.id; return; }
       if (row._close) { closeDate = $('[data-pv="__close"]', row).value; return; }
       var fd = row._fd, v = pdValueOf(fd.name);
       if (sameVal(v, fd.current)) return;
@@ -2069,6 +2344,7 @@
       overwrite: overwrite,
       setMode: 'replace',
       closeDate: closeDate,
+      moveStage: moveStage,
       today: { note: $('#pdNote').value.trim(), completeId: pend ? pend.id : null },
       next: { date: f.recallDate.value || '', time: $('#pdTime').value || '', note: $('#pdNextNote').value.trim() }
     };
@@ -2123,6 +2399,9 @@
       var rec = collectRec();
       if (!rec) return;
       var payload = pdPayload();
+      // 다음 액션이 흐리면 한 번 묻는다 (노션 03: '재컨택 예정'은 안 좋은 예)
+      if (D.ent && payload.next.date && !/\S{2,}.*\S{2,}/.test(payload.next.note || '') &&
+          !confirm('다음 액션 할 일이 비어 있거나 짧습니다. 예: "OOO 제안 내용 가지고 재컨택". 이대로 기록할까요?')) return;
       rec.pd = { dealId: payload.dealId, title: pd.data.deal.title || '', payload: payload, done: [], status: 'sending' };
       pd.busy = true;
       var btn = $('#pdSend');

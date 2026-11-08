@@ -74,6 +74,8 @@
       lsSet('records', merged);
       if (onlyLocal.length || !server.records) schedule('records', 100);
 
+      // 엔터프라이즈 자료는 공개 저장소에 두지 않고 서버에서만 받는다 (올리지는 않음)
+      if (server.ent_data) lsSet('ent_data', server.ent_data);
       // 고친 멘트, 화면 편집은 서버에 있으면 서버 값, 없으면 이 기기 값을 올린다
       ['edits', 'custom'].forEach(function (k) {
         if (server[k]) lsSet(k, server[k]);
