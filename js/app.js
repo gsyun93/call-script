@@ -192,8 +192,13 @@
 
   // 견적 계산. 후불/선불 대수를 안 넣었으면 상황 파악에서 받은 대수를 후불로 본다
   // 포스·단말기·프린터 세트를 견적에 넣는지 (따로 정하지 않았으면 넣는다)
+  // 포스 세트는 포스 질문에서 "약정 끝났거나 없대요"처럼 포스를 바꾸는 답이 나왔을 때만 넣는다 (기본은 빼고)
   function posOn() {
-    return state.vars.qPos === undefined ? true : !!state.vars.qPos;
+    return !!state.vars.qPos;
+  }
+  // 지금 쓰는 타사 포스를 그대로 쓰는 답이 나왔는지 (마스터 태블릿, "포스는 그대로" 멘트)
+  function posKeep() {
+    return state.vars.qPos === false && !state.vars.posOurs;
   }
   function isNewStore() { return state.vars.status === '오픈 준비 중'; }
   // 메뉴 사진: 오픈 준비 중 매장만, 따로 끄지 않았으면 넣는다
@@ -235,7 +240,7 @@
     var extras = [];
     if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
     // 타사 포스를 쓰면 마스터 태블릿 (기본 1대). 무상이라 대수와 무상 대수에 같이 센다
-    var master = withPos || !tables || v.posOurs ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
+    var master = withPos || !tables || !posKeep() ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
     if (master) extras.push({ label: D.quote.master.label + ' ' + master + '대 (무상 대수에 포함)', say: '' });
     var units = tables + master, free = freeT + master;
     var batt = battCount(tables);
@@ -266,7 +271,7 @@
       postPrice: won(prices().post),
       prePrice: won(prices().pre),
       posPrice: won(prices().pos),
-      posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 쓰세요. ' : '포스 세트는 월 ' + won(prices().pos) + '원이에요. ',
+      posLine: !c.withPos ? (state.vars.qPos === false ? '포스는 지금 쓰시는 걸 그대로 쓰세요. ' : '') : '포스 세트는 월 ' + won(prices().pos) + '원이에요. ',
       freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 대당 월 ' + won(c.unit) + '원꼴이에요. ' : '',
       setLine: c.withPos ? '에 포스기, 카드 단말기, 주방 프린터까지 해서' : '만 해서',
       powerLine: powerLine(),
@@ -720,7 +725,7 @@
       ['주방 프린터', int('printers') ? int('printers') + '대' : (state.vars.printers === '0' ? '없음' : '')],
       ['인터넷·CCTV', v.net],
       ['포스', [v.posNow, posDetail()].filter(Boolean).join(' · ')],
-      ['포스 세트', c.withPos ? '포함' : '미포함, 지금 포스 연동'],
+      ['포스 세트', c.withPos ? '포함' : state.vars.qPos === false ? '미포함, 지금 포스 연동' : '미포함'],
       ['결제', c.pay ? c.pay.label + (c.pay.note ? ' (' + c.pay.note + ')' : '') : ''],
       ['혜택', c.extras.map(function (b) { return b.label; }).filter(Boolean).join(', ')],
       ['월 합계', c.units ? won(c.total) + '원 (36개월)' : '']
@@ -746,7 +751,7 @@
         num('qPre', '선불형 대수', String(c0.pre)) +
         num('qFree', '무상 대수', String(c0.free)) +
         num('qBatt', '보조배터리 (개)', String(battCount(c0.tables))) +
-        (posOn() ? '' : num('qMaster', '마스터 태블릿', String(c0.master))) +
+        (!posKeep() ? '' : num('qMaster', '마스터 태블릿', String(c0.master))) +
       '</div>' +
       '<div class="togs"><span class="tog-label">결제</span>' +
         Q.pay.map(function (p) {
@@ -777,7 +782,7 @@
         (c.free ? c.units + '대 중 ' + c.free + '대 무상, 정가 ' + won(list) + '원' : '무상 없음, 정가 그대로') + '</small></div>' +
       '<div class="cs-item"><span>테이블오더</span><b>월 ' + won(c.table) + '원</b><small>' + parts.join(' + ') +
         (c.free ? ' 중 ' + c.free + '대 무상' : '') + ', 대당 ' + won(c.unit) + '원</small></div>' +
-      '<div class="cs-item"><span>포스·단말기·프린터</span><b>' + (!c.withPos ? '미포함' : '월 ' + won(c.pos) + '원') + '</b><small>' + (!c.withPos ? '지금 쓰는 포스 연동' : '포스기, 카드 단말기, 주방 프린터') + '</small></div>' +
+      '<div class="cs-item"><span>포스·단말기·프린터</span><b>' + (!c.withPos ? '미포함' : '월 ' + won(c.pos) + '원') + '</b><small>' + (!c.withPos ? (state.vars.qPos === false ? '지금 쓰는 포스 연동' : '포스 답을 받으면 들어감') : '포스기, 카드 단말기, 주방 프린터') + '</small></div>' +
       '<div class="cs-item total"><span>월 합계</span><b>' + won(c.total) + '원</b><small>' + Q.months + '개월 ' + won(c.sum) + '원</small></div>';
   }
 
