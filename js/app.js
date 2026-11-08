@@ -233,6 +233,9 @@
     // 견적 멘트와 요약에 들어가는 혜택 (결제 방법은 따로)
     var extras = [];
     if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
+    // 타사 포스를 쓰면 마스터 태블릿 (기본 1대, 무상)
+    var master = withPos ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
+    if (master) extras.push({ label: D.quote.master.label + ' ' + master + '대 (무상)', say: D.quote.master.say + ' ' + master + '대' });
     var batt = battCount(units);
     // 보조배터리는 요약에만 (멘트에는 안 넣음)
     if (batt) extras.push({ label: '보조배터리 ' + batt + '개', say: '' });
@@ -240,7 +243,7 @@
     return {
       post: post, pre: pre, units: units, free: free, paid: units - free,
       table: table, unit: units ? table / units : 0, pos: pos, total: total,
-      sum: total * D.quote.months, picked: picked, pay: pay, extras: extras, bundle: !!v.qBundle, withPos: withPos
+      sum: total * D.quote.months, master: master, picked: picked, pay: pay, extras: extras, bundle: !!v.qBundle, withPos: withPos
     };
   }
 
@@ -714,7 +717,7 @@
       ['거치대', v.stand],
       ['주방 프린터', int('printers') ? int('printers') + '대' : (state.vars.printers === '0' ? '없음' : '')],
       ['인터넷·CCTV', v.net],
-      ['포스', v.posNow],
+      ['포스', [v.posNow, posDetail()].filter(Boolean).join(' · ')],
       ['포스 세트', c.withPos ? (v.qBundle ? '포함 (인터넷 결합 무상)' : '포함') : '미포함, 지금 포스 연동'],
       ['결제', c.pay ? c.pay.label + ' (' + c.pay.note + ')' : ''],
       ['혜택', [v.qBundle && c.withPos ? '인터넷 결합 (포스 세트 무상)' : ''].concat(c.extras.map(function (b) { return b.label; })).filter(Boolean).join(', ')],
@@ -741,6 +744,7 @@
         num('qPre', '선불형 대수', String(c0.pre)) +
         num('qFree', '무상 대수', String(c0.free)) +
         num('qBatt', '보조배터리 (개)', String(battCount(c0.units))) +
+        (posOn() ? '' : num('qMaster', '마스터 태블릿', String(c0.master))) +
       '</div>' +
       '<div class="togs"><span class="tog-label">결제</span>' +
         Q.pay.map(function (p) {
@@ -808,6 +812,8 @@
         state.vars[k] = k === 'qPos' ? !posOn() : k === 'qPhoto' ? !photoOn() : !state.vars[k];
         b.classList.toggle('is-on', !!state.vars[b.dataset.qt]);
         changed();
+        // 포스 포함을 바꾸면 마스터 태블릿 칸이 생기거나 없어진다
+        if (k === 'qPos') renderScript();
       });
     });
     // 결제 방법은 하나만 (다시 누르면 해제)
@@ -1038,7 +1044,8 @@
     var picked = state.vars.order || parseInt(state.vars.qPost, 10) || parseInt(state.vars.qPre, 10);
     $('.qb-total', bar).innerHTML = '<span class="qb-lab">월 합계</span>' + (!c.units
       ? '<b class="qb-empty">대수 입력 전</b>'
-      : picked ? '<b>' + won(c.total) + '원</b><small>36개월 ' + won(c.sum) + '원</small>'
+      : picked ? '<b>' + won(c.total) + '원</b><small>36개월 ' + won(c.sum) + '원' +
+        (c.withPos && !c.bundle && !state.vars.qNoNet ? ' · 인터넷 결합 시 -' + won(prices().pos) + '원' : c.withPos && c.bundle ? ' · 포스 무상(인터넷 결합)' : '') + '</small>'
       : '<b class="qb-empty">선불·후불 선택 전</b>');
   }
   // 바에서 대수를 바꾸면 전원 방식, 거치대, 견적 계산기 대수까지 같이 맞춘다
@@ -1485,6 +1492,11 @@
   }
 
   // 통화 중 받은 정보와 답변을 결과 기록 메모용 문장으로
+  // 쓰던 포스 정보 (포스 프로그램, 남은 약정, VAN사)
+  function posDetail() {
+    var v = state.vars;
+    return [v.posProg, v.posLeft ? '약정 ' + v.posLeft : '', v.posVan ? 'VAN ' + v.posVan : ''].filter(function (x) { return String(x || '').trim(); }).join(', ');
+  }
   function answersMemo() {
     var v = state.vars, lines = [];
     if (v.status) {
@@ -1499,6 +1511,7 @@
         });
       });
     });
+    if (posDetail()) lines.push('쓰던 포스: ' + posDetail());
     D.objections.forEach(function (ob) {
       var a = (state.answers['obj.' + ob.id] || '').trim();
       if (a) lines.push(ob.title + ': ' + a);

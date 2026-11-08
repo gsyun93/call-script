@@ -142,7 +142,7 @@ window.TOOL_DATA = {
           text: '인터넷이랑 CCTV는 쓰시는 업체 있으세요?',
           next: 'h_info',
           options: [
-            { label: '없어요 / 새로 해요', to: 'n5_none', set: { net: '없음, 같이 진행', qBundle: true, qNoNet: false } },
+            { label: '없어요 / 새로 해요', to: 'n5_none', set: { net: '없음, 같이 진행', qBundle: false, qNoNet: false } },
             // 바꿀 생각 없으면 견적 계산기에서 인터넷 결합 버튼을 숨긴다
             { label: '있고 바꿀 생각 없어요', to: 'h_info', set: { net: '있음, 변경 안 함', qBundle: false, qNoNet: true } }
           ]
@@ -220,8 +220,8 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '약정 끝났거나 없대요', to: 'n4_free', set: { posNow: '약정 없음, 교체 가능', qPos: true } },
-            { label: '약정이 남았대요', to: 'h_info', set: { posNow: '약정 남음', qPos: false } },
-            { label: '연동 안 되는 포스 / 본사 지정', to: 'h_info', set: { posNow: '연동 확인 필요', qPos: false },
+            { label: '약정이 남았대요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '약정 남음', qPos: false } },
+            { label: '연동 안 되는 포스 / 본사 지정', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '연동 확인 필요', qPos: false },
               say: '오케이포스, 이지포스, 유니온포스, 포스마스터는 연동돼요. 체리포스는 안 돼요. 본사 지정 포스는 주문만 받는 용도예요.' }
           ]
         },
@@ -239,7 +239,8 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '아직 없대요', to: 'n4_rec', set: { posNow: '미정, 페이히어 추천', qPos: true } },
-            { label: '알아본 데 있대요', to: 'n4_cmp', set: { posNow: '타사 검토 중', qPos: true } }
+            { label: '알아본 데 있대요', to: 'n4_cmp', set: { posNow: '타사 검토 중', qPos: true } },
+            { label: '쓰던 포스 있대요', inputs: [{ key: 'posProg', placeholder: '포스 프로그램' }, { key: 'posLeft', placeholder: '남은 약정' }, { key: 'posVan', placeholder: 'VAN사' }], to: 'h_info', set: { posNow: '쓰던 포스 있음', qPos: false } }
           ]
         },
         n4_rec: {
@@ -751,6 +752,8 @@ window.TOOL_DATA = {
     ],
     // 메뉴 사진은 오픈 준비 중 매장만, 보조배터리는 수량 칸으로 (금액 반영 없음)
     photo: { label: '메뉴 사진 촬영 20장', say: '메뉴 사진 20장 촬영' },
+    // 타사 포스를 그대로 쓰면 주문 받는 마스터 태블릿을 같이 넣는다 (무상, 대수는 견적 계산기에서)
+    master: { label: '마스터 태블릿', say: '주문 받는 마스터 태블릿' },
     receipt: '분기 50롤 (3년)',
     benefits: [
       // when: 'contract'는 지금 포스 약정이 남은 매장만
