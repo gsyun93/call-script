@@ -41,6 +41,7 @@
     base.stageCards = e.stageCards || {};
     base.nodeStage = e.nodeStage || {};
     base.pipelines = e.pipelines || {};
+    base.entRecord = e.record || {};
     return base;
   }
 
@@ -1385,6 +1386,7 @@
     if (!c) { box.innerHTML = ''; return; }
     var steps = c.pipe ? (D.pipelines[c.pipe] || []) : [];
     var at = steps.indexOf(c.at);
+    state.stageAt = c.at || '';
     var html = '<div class="sc"><p class="sc-kicker">지금 단계</p><h3>' + esc(c.title) + '</h3>';
     if (steps.length) {
       html += '<p class="sc-pipe">파이프드라이브 [Enterprise] ' + esc(c.pipe) + '</p><ol class="sc-flow">' + steps.map(function (st, i) {
@@ -1818,7 +1820,63 @@
     var v = state.vars;
     return [v.posProg, v.posLeft ? '약정 ' + v.posLeft : '', v.posVan ? 'VAN ' + v.posVan : ''].filter(function (x) { return String(x || '').trim(); }).join(', ');
   }
+  function hqMemo() {
+    var v = state.vars, out = [], used = {};
+    var lab = {};
+    D.steps.forEach(function (st) {
+      if (st.id !== 'hq') return;
+      Object.keys(st.nodes).forEach(function (id) { (st.nodes[id].fields || []).forEach(function (f) { lab[f.key] = f; }); });
+    });
+    var val = function (k) {
+      used[k] = true;
+      var x = v[k], f = lab[k];
+      if (x == null || x === '') return '';
+      return (f ? f.label : k) + ': ' + (f && f.type === 'date' ? fmtKoDate(x) : x);
+    };
+    var sec = function (title, keys) {
+      var ls = keys.map(val).filter(Boolean);
+      out.push('[' + title + ']');
+      out.push(ls.length ? ls.join('\n') : '-');
+      out.push('');
+    };
+    sec('키맨', ['kmName', 'kmTitle', 'decider']);
+    var head = [];
+    if (v.brand) head.push('브랜드: ' + v.brand);
+    if (v.media) head.push('찾은 곳: ' + v.media);
+    if (v.referrer) head.push('소개해 준 곳: ' + v.referrer);
+    var info = ['stores', 'brands', 'bizType', 'years', 'directMonths', 'expandN', 'open', 'size', 'unitsPerStore', 'sales', 'posProg', 'posVan', 'toNow', 'contractLeft', 'rivalEtc'].map(val).filter(Boolean);
+    out.push('[본사 현황]');
+    out.push(head.concat(info).join('\n') || '-');
+    out.push('');
+    // 니즈: 지나온 소구점 화면
+    var hq = D.steps.filter(function (st) { return st.id === 'hq'; })[0];
+    var needs = hq ? stepPath(hq).filter(function (id) { return /^p_/.test(id) && hq.nodes[id]; }).map(function (id) { return hq.nodes[id].label || id; }) : [];
+    out.push('[니즈]');
+    out.push(needs.length ? needs.join(', ') : '-');
+    out.push('');
+    var nx = [];
+    if (v.meetType) nx.push('미팅: ' + v.meetType + (v.date ? ' ' + fmtKoDate(v.date) : '') + (v.time ? ' ' + v.time : '') + (v.place ? ' / ' + v.place : ''));
+    else if (v.date) nx.push('재연락: ' + fmtKoDate(v.date) + (v.time ? ' ' + v.time : ''));
+    out.push('[다음 액션]');
+    out.push(nx.join('\n') || '-');
+    // 그 밖의 답변
+    var etc = [];
+    Object.keys(lab).forEach(function (k) { if (!used[k] && k !== 'date' && k !== 'time' && k !== 'place') { var l = val(k); if (l) etc.push(l); } });
+    D.objections.forEach(function (ob) {
+      var a = (state.answers['obj.' + ob.id] || '').trim();
+      if (a) etc.push(ob.title + ': ' + a);
+    });
+    D.steps.forEach(function (s) {
+      Object.keys(s.nodes).forEach(function (id) {
+        var a = answerOf(id);
+        if (a) etc.push((s.nodes[id].label || '메모') + ': ' + a);
+      });
+    });
+    if (etc.length) out.push('', '[기타]', etc.join('\n'));
+    return out.join('\n');
+  }
   function answersMemo() {
+    if (D.ent && state.vars.entKind === '본사') return hqMemo();
     var v = state.vars, lines = [];
     if (v.status) {
       var st = [v.status, v.biz, v.region, v.statusNote].filter(Boolean).join(', ');
@@ -1982,10 +2040,21 @@
     }).join('');
   }
 
+  // 결과 기록 양식 종류: 매장 영업(smb), 엔터프라이즈 본사(hq), 엔터프라이즈 가맹점(fr)
+  function recKind(rec) {
+    if (!D.ent) return 'smb';
+    var k = rec ? rec.kind : state.vars.entKind;
+    return k === '본사' ? 'hq' : 'fr';
+  }
+  function sensOf(level) {
+    var s = D.sensitivity[level];
+    var e = state.recKind === 'hq' && D.entRecord.hq && D.entRecord.hq.sens ? D.entRecord.hq.sens[level] : null;
+    return e ? { desc: e.desc, reasons: e.reasons } : s;
+  }
   function renderSensOpts() {
     $('#sensOpts').innerHTML = ['상', '중', '하'].map(function (k) {
       return '<label class="s-' + k + '"><input type="radio" name="sens" value="' + k + '" required>' +
-        k + ' <small>성사 ' + D.sensitivity[k].rate + '</small></label>';
+        k + (D.ent ? '' : ' <small>성사 ' + D.sensitivity[k].rate + '</small>') + '</label>';
     }).join('');
     $$('#sensOpts input').forEach(function (r) {
       r.addEventListener('change', function () { renderReasons(r.value, []); });
@@ -1993,7 +2062,7 @@
   }
 
   function renderReasons(level, checked) {
-    var s = D.sensitivity[level];
+    var s = sensOf(level);
     $('#sensDesc').textContent = s ? s.desc : '';
     if (!s) {
       $('#reasonChips').innerHTML = '<p class="muted">감도를 먼저 고르세요.</p>';
@@ -2011,11 +2080,18 @@
     state.editing = rec ? rec.id : null;
     $('#drawerTitle').textContent = rec ? '통화 기록 수정' : '통화 결과 기록';
 
-    var defStage = state.step === 'recall' || state.step === 'close' || state.step === 'quote' ? '견적서발송' : '1차컨택';
+    var kind = state.recKind = recKind(rec);
+    var R = (D.entRecord || {})[kind] || {};
+    var allStages = kind === 'hq' ? D.pipelines['본사'] : kind === 'fr' ? D.pipelines['가맹점'] : D.callStages;
+    var acts = R.next || D.nextActions;
+    var defStage = kind === 'hq' ? (allStages.indexOf(state.stageAt) !== -1 ? state.stageAt : allStages[0])
+      : kind === 'fr' ? '1차 컨택 완료'
+      : state.step === 'recall' || state.step === 'close' || state.step === 'quote' ? '견적서발송' : '1차컨택';
+    $('#rStoreLbl').textContent = R.label || '매장명';
     // 예전 단계 이름으로 남은 기록은 고칠 때 그 이름을 유지한다
-    var stages = rec && rec.stage && D.callStages.indexOf(rec.stage) === -1 ? D.callStages.concat(rec.stage) : D.callStages;
+    var stages = rec && rec.stage && allStages.indexOf(rec.stage) === -1 ? allStages.concat(rec.stage) : allStages;
     fillSelect($('#rStage'), stages, rec ? rec.stage : defStage);
-    fillSelect($('#rNext'), D.nextActions, rec ? rec.next : D.nextActions[0]);
+    fillSelect($('#rNext'), rec && rec.next && acts.indexOf(rec.next) === -1 ? acts.concat(rec.next) : acts, rec ? rec.next : acts[0]);
 
     f.store.value = rec ? rec.store : autoStoreName();
     f.recallDate.value = rec ? (rec.recallDate || '') : (state.vars.date || '');
@@ -2090,6 +2166,11 @@
         recallDate: f.recallDate.value,
         memo: f.memo.value.trim()
       };
+    if (D.ent) {
+      var old = state.editing && state.records.filter(function (r) { return r.id === state.editing; })[0];
+      rec.mode = 'ent';
+      rec.kind = old && old.kind ? old.kind : (state.recKind === 'hq' ? '본사' : '가맹점');
+    }
     return rec;
   }
   function commitRec(rec, msg) {
@@ -2487,15 +2568,20 @@
 
   // ---------- 통화 기록 목록 ----------
   function updateCount() {
-    var due = state.records.filter(function (r) { return r.recallDate && r.recallDate <= today() && r.next !== '종료'; }).length;
-    $('#logCount').textContent = state.records.length ? (due ? state.records.length + ' / 재컨택 ' + due : state.records.length) : '';
+    var due = modeRecords().filter(function (r) { return r.recallDate && r.recallDate <= today() && r.next !== '종료'; }).length;
+    var n = modeRecords().length;
+    $('#logCount').textContent = n ? (due ? n + ' / 재컨택 ' + due : n) : '';
+  }
+  // 엔터프라이즈 모드에서는 엔터프라이즈 기록만, 매장 영업에서는 매장 기록만
+  function modeRecords() {
+    return state.records.filter(function (r) { return D.ent ? r.mode === 'ent' : r.mode !== 'ent'; });
   }
 
   function filteredRecords() {
     var fs = $('#fSens').value, fv = $('#fView').value;
     var ft = ($('#fText').value || '').trim().toLowerCase();
     var t = today(), w = addDays(t, 7);
-    return state.records.filter(function (r) {
+    return modeRecords().filter(function (r) {
       if (fs && r.sens !== fs) return false;
       if (fv === 'due' && !(r.recallDate && r.recallDate <= t && r.next !== '종료')) return false;
       if (fv === 'week' && !(r.recallDate && r.recallDate <= w && r.next !== '종료')) return false;
@@ -2515,7 +2601,7 @@
       var isDue = r.recallDate && r.recallDate <= t && r.next !== '종료';
       return '<tr data-id="' + r.id + '">' +
         '<td class="nowrap">' + fmtStamp(r.ts) + '</td>' +
-        '<td>' + esc(r.store || '-') + (r.pd ? '<span class="pd-tag' + (r.pd.status === 'sent' ? '' : ' is-bad') + '" title="' + esc(r.pd.error || '') + '">' + (r.pd.status === 'sent' ? '파이프드라이브 기록됨' : '파이프드라이브 미전송') + '</span>' : '') + '</td>' +
+        '<td>' + (r.kind ? '<span class="kind-tag">' + esc(r.kind) + '</span>' : '') + esc(r.store || '-') + (r.pd ? '<span class="pd-tag' + (r.pd.status === 'sent' ? '' : ' is-bad') + '" title="' + esc(r.pd.error || '') + '">' + (r.pd.status === 'sent' ? '파이프드라이브 기록됨' : '파이프드라이브 미전송') + '</span>' : '') + '</td>' +
         '<td class="nowrap">' + esc(r.stage) + '</td>' +
         '<td><span class="s s-' + r.sens + '">' + r.sens + '</span></td>' +
         '<td>' + esc(reasons) + '</td>' +
@@ -2527,7 +2613,7 @@
         '</tr>';
     }).join('');
     $('#logEmpty').style.display = rows.length ? 'none' : 'block';
-    $('#logEmpty').textContent = state.records.length ? '조건에 맞는 기록이 없습니다.' : '아직 기록이 없습니다. 통화가 끝나면 위쪽의 결과 기록 버튼으로 남겨주세요.';
+    $('#logEmpty').textContent = modeRecords().length ? '조건에 맞는 기록이 없습니다.' : '아직 기록이 없습니다. 통화가 끝나면 위쪽의 결과 기록 버튼으로 남겨주세요.';
     updateCount();
   }
 
