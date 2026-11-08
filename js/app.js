@@ -339,7 +339,8 @@
     var vals = varValues();
     // varValues에 없는 값(브랜드, 장소 등)은 입력한 값 그대로
     text.replace(/\{([a-zA-Z0-9-]+)\}/g, function (m, k) {
-      if (vals[k] === undefined && state.vars[k] != null && typeof state.vars[k] !== 'object') vals[k] = String(state.vars[k]);
+      if (vals[k] === undefined && Array.isArray(state.vars[k])) vals[k] = state.vars[k].join(', ');
+      else if (vals[k] === undefined && state.vars[k] != null && typeof state.vars[k] !== 'object') vals[k] = String(state.vars[k]);
       return m;
     });
     if (!asHtml) {
@@ -703,15 +704,32 @@
 
   function renderFields(list) {
     if (!list.length) return '';
+    var grp = '';
     return '<div class="fields">' + list.map(function (f) {
       var v = state.vars[f.key] || '';
       var tipA = f.tip ? ' data-tip="' + esc(f.tip) + '"' : '';
+      var head = '';
+      if (f.group && f.group !== grp) { grp = f.group; head = '<p class="fields-h">' + esc(f.group) + '</p>'; }
+      if (f.type === 'select') {
+        return head + '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><select data-var="' + f.key + '"><option value="">선택 안 함</option>' +
+          (f.options || []).map(function (o) { return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select></label>';
+      }
+      if (f.type === 'multi') {
+        var picked = Array.isArray(v) ? v : (v ? [v] : []);
+        return head + '<div class="field"' + tipA + '><span>' + esc(f.label) + '</span><div class="ms" data-mvar="' + f.key + '">' +
+          '<button type="button" class="ms-box">' + msTags(picked) + '</button>' +
+          '<div class="ms-pop" hidden><input type="text" class="ms-q" placeholder="검색">' +
+          '<div class="ms-list">' + (f.options || []).map(function (o) {
+            return '<label class="ms-opt"><input type="checkbox" value="' + esc(o) + '"' + (picked.indexOf(o) !== -1 ? ' checked' : '') + '>' + esc(o) + '</label>';
+          }).join('') + '</div></div></div></div>';
+      }
+      // head는 아래 두 return 앞에 붙는다
       if (f.type === 'date' || f.type === 'time') {
         var disp = f.type === 'date' ? shortDate(v) : v;
-        return '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><input type="text" autocomplete="off" data-var="' + f.key + '" data-kind="' + f.type + '"' +
+        return head + '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><input type="text" autocomplete="off" data-var="' + f.key + '" data-kind="' + f.type + '"' +
           ' placeholder="' + (f.type === 'date' ? '예: 10/28, 내일' : '예: 3시, 15:30') + '" value="' + esc(disp) + '"></label>';
       }
-      return '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><input type="' + f.type + '" data-var="' + f.key + '"' +
+      return head + '<label class="field"' + tipA + '><span>' + esc(f.label) + '</span><input type="' + f.type + '" data-var="' + f.key + '"' +
         (f.type === 'number' ? ' min="0" inputmode="numeric"' : '') +
         ' value="' + esc(v) + '"></label>';
     }).join('') + '</div>';
@@ -1300,6 +1318,27 @@
       state.answers[ta.dataset.ans] = ta.value;
       store.set('answers', state.answers);
     });
+    $$('.ms[data-mvar]', box).forEach(function (ms) {
+      var pop = $('.ms-pop', ms), q = $('.ms-q', ms), key = ms.dataset.mvar;
+      $('.ms-box', ms).addEventListener('click', function () {
+        var open = pop.hidden;
+        $$('.ms-pop').forEach(function (p) { p.hidden = true; });
+        pop.hidden = !open;
+        if (open) { q.value = ''; $$('.ms-opt', ms).forEach(function (o) { o.hidden = false; }); q.focus(); }
+      });
+      q.addEventListener('input', function () {
+        var w = q.value.trim();
+        $$('.ms-opt', ms).forEach(function (o) { o.hidden = w && o.textContent.indexOf(w) === -1; });
+      });
+      $$('.ms-list input', ms).forEach(function (c) {
+        c.addEventListener('change', function () {
+          var list = $$('.ms-list input:checked', ms).map(function (x) { return x.value; });
+          state.vars[key] = list;
+          saveVars();
+          $('.ms-box', ms).innerHTML = msTags(list);
+        });
+      });
+    });
     $$('[data-var]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         var v = inp.value;
@@ -1468,8 +1507,8 @@
           if (seen[f.key] || f.key === 'date' || f.key === 'time' || f.key === 'place') return;
           seen[f.key] = true;
           var x = v[f.key];
-          if (x == null || x === '') return;
-          out.push(f.label + ': ' + (f.type === 'date' ? fmtKoDate(x) : x));
+          if (x == null || x === '' || (Array.isArray(x) && !x.length)) return;
+          out.push(f.label + ': ' + (f.type === 'date' ? fmtKoDate(x) : Array.isArray(x) ? x.join(', ') : x));
         });
       });
     });
@@ -1489,7 +1528,7 @@
     var props = pdProposals(d.fields);
     (P.extra || []).forEach(function (n) { var p = props[n]; if (p && (!Array.isArray(p) || p.length)) names.push(n); });
     // 통화에서 값을 받은 엔터프라이즈 항목도 같이
-    ['[Ent] 현재 보유 가맹점 수', '[Ent] 최초 미팅 유형', '사용 포스', 'VAN', '[Product] 경쟁사'].forEach(function (n) { var p = props[n]; if (p && (!Array.isArray(p) || p.length)) names.push(n); });
+    ['[Ent] 현재 보유 가맹점 수', '[Ent] 최초 미팅 유형', '사용 포스', 'VAN', '[Product] 경쟁사', '업종', '세부업종', '오픈예정일자', '잔여 약정 개월', '[Ent] 도입 목표 일정', '[Ent] 정보공개서 등록 날짜'].forEach(function (n) { var p = props[n]; if (p && (!Array.isArray(p) || p.length)) names.push(n); });
     return d.fields.filter(function (f) { return names.indexOf(f.name) !== -1; });
   }
   var SMB_PD = ['★리드 감도', '매장 운영 여부', '매장명', '테이블 수', '오픈예정일자', '업종', '[Product] 경쟁사', '사용 포스', '매장 운영'];
@@ -1831,6 +1870,7 @@
       used[k] = true;
       var x = v[k], f = lab[k];
       if (x == null || x === '') return '';
+      if (Array.isArray(x)) { if (!x.length) return ''; x = x.join(', '); }
       return (f ? f.label : k) + ': ' + (f && f.type === 'date' ? fmtKoDate(x) : x);
     };
     var sec = function (title, keys) {
@@ -1844,7 +1884,7 @@
     if (v.brand) head.push('브랜드: ' + v.brand);
     if (v.media) head.push('찾은 곳: ' + v.media);
     if (v.referrer) head.push('소개해 준 곳: ' + v.referrer);
-    var info = ['stores', 'brands', 'bizType', 'years', 'directMonths', 'expandN', 'open', 'size', 'unitsPerStore', 'sales', 'posProg', 'posVan', 'toNow', 'contractLeft', 'rivalEtc'].map(val).filter(Boolean);
+    var info = ['stores', 'bizType', 'bizSub', 'open', 'entPos', 'posVan', 'entRival', 'contractMonths', 'goalTerm', 'fddDate', 'brands', 'years', 'directMonths', 'expandN', 'size', 'unitsPerStore', 'sales', 'toNow', 'contractLeft', 'rivalEtc'].map(val).filter(Boolean);
     out.push('[본사 현황]');
     out.push(head.concat(info).join('\n') || '-');
     out.push('');
@@ -2257,9 +2297,17 @@
       if (v.stores) p['[Ent] 현재 보유 가맹점 수'] = String(v.stores);
       if (v.meetType) p['[Ent] 최초 미팅 유형'] = findOpt(opt['[Ent] 최초 미팅 유형'] || [], v.meetType) || v.meetType;
       if (v.mailAsked) p['[Ent] 소개서 및 자료 발송일자'] = today();
-      p['VAN'] = findOpt(opt['VAN'] || [], v.posVan);
-      p['업종'] = findOpt(opt['업종'] || [], v.bizType || v.biz);
-      p['사용 포스'] = findOpt(opt['사용 포스'] || [], v.posProg);
+      var inOpt = function (name, x) { return (opt[name] || []).indexOf(x) !== -1 ? x : findOpt(opt[name] || [], x); };
+      var inSet = function (name, list) { return (Array.isArray(list) ? list : list ? [list] : []).filter(function (x) { return (opt[name] || []).indexOf(x) !== -1; }); };
+      p['VAN'] = inOpt('VAN', v.posVan);
+      p['업종'] = inOpt('업종', v.bizType || v.biz);
+      p['사용 포스'] = inSet('사용 포스', v.entPos);
+      var rv = inSet('[Product] 경쟁사', v.entRival);
+      if (rv.length) p['[Product] 경쟁사'] = rv; else delete p['[Product] 경쟁사'];
+      if (v.bizSub) p['세부업종'] = String(v.bizSub);
+      if (v.contractMonths) p['잔여 약정 개월'] = String(v.contractMonths);
+      if (v.goalTerm) p['[Ent] 도입 목표 일정'] = inOpt('[Ent] 도입 목표 일정', v.goalTerm);
+      if (isIso(v.fddDate)) p['[Ent] 정보공개서 등록 날짜'] = v.fddDate;
     }
     return p;
   }
@@ -2429,7 +2477,7 @@
   // 다른 곳을 누르면 여러 개 선택 목록을 닫는다
   document.addEventListener('click', function (e) {
     if (!e.target.closest || e.target.closest('.ms')) return;
-    $$('#pdPanel .ms-pop').forEach(function (p) { p.hidden = true; });
+    $$('.ms-pop').forEach(function (p) { p.hidden = true; });
   });
   // 감도, 메모, 재컨택일을 바꾸면 미리보기도 맞춘다
   function pdSync(e) {

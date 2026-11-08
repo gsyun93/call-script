@@ -14,7 +14,8 @@ const API = 'https://api.pipedrive.com';
 const FIELD_NAMES = ['★리드 감도', '매장 운영 여부', '매장명', '테이블 수', '오픈예정일자', '업종', '[Product] 경쟁사', '사용 포스', '매장 운영',
   // Enterprise (본사 딜)
   'VAN', '[Ent] 현재 보유 가맹점 수', '[Ent] 최초 미팅 유형', '[Ent] 회의록 노션링크', '[Ent] VOC 주관부서', '[Ent] 제안 사업 구조',
-  '[Ent] 제안혜택', '[Ent] 도입 목표 일정', '[Ent] 소개서 및 자료 발송일자'];
+  '[Ent] 제안혜택', '[Ent] 도입 목표 일정', '[Ent] 소개서 및 자료 발송일자',
+  '세부업종', '잔여 약정 개월', '[Ent] 정보공개서 등록 날짜'];
 const ACTIVITY_NAME = '재컨택';
 
 const CORS = {
@@ -233,8 +234,12 @@ async function saveFields(dealId: number, deal: any, input: Record<string, any>,
     } else {
       const s = String(val ?? '').trim();
       if (!s) continue;
-      update[f.key] = s;
-      v2custom[f.key] = s;
+      // 숫자 항목은 숫자로 (v2는 글자를 받지 않음)
+      const clean = s.replace(/[^0-9.\-]/g, '');
+      const num = f.field_type === 'double' || f.field_type === 'int' ? (clean ? Number(clean) : NaN) : null;
+      if (num !== null && isNaN(num)) { skipped.push({ name, reason: '숫자 아님: ' + s }); continue; }
+      update[f.key] = num !== null ? num : s;
+      v2custom[f.key] = num !== null ? num : s;
     }
     changed.push(name);
   }

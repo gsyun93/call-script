@@ -230,6 +230,16 @@ body.ent button[data-tip], body.ent .choice[data-tip], body.ent .tile[data-tip] 
 .field span { font-size: 15px; color: var(--ink-2); font-weight: 600; padding-left: 4px; }
 .field input { font-size: 20px; padding: 13px 16px; min-width: 210px; border-radius: 14px; }
 .field input[type="number"] { min-width: 0; width: 140px; }
+.fields-h { flex-basis: 100%; margin: 6px 0 -4px; padding-left: 4px; font-size: 13px; font-weight: 700; color: var(--accent); }
+.field select { font-size: 18px; padding: 12px 14px; min-width: 210px; max-width: 320px; border-radius: 14px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.field .ms { width: 320px; }
+.field .ms-box { min-height: 52px; border-radius: 14px; padding: 8px 12px; }
+.field .ms-tag { font-size: 14px; padding: 3px 10px; }
+.field .ms-none { font-size: 16px; }
+.field .ms-pop { z-index: 20; }
+.field label.ms-opt { display: flex; flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); padding: 5px 2px; cursor: pointer; }
+.field .ms-opt input { width: auto; min-width: 0; padding: 0; }
+.field .ms-q { font-size: 14px; min-width: 0; padding: 6px 10px; border-radius: 8px; }
 textarea.answer { display: block; width: 100%; margin-bottom: 18px; resize: vertical; font-size: 18px; padding: 14px 18px; border-radius: 14px; }
 
 /* 버튼 공통: 누르면 살짝 눌리는 느낌 */
