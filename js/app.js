@@ -224,7 +224,8 @@
     var freePrice = pre > post ? Q.pre : Q.post;
     var table = post * Q.post + pre * Q.pre - freeT * freePrice;
     var withPos = posOn();
-    var pos = !withPos || v.qBundle ? 0 : Q.pos;
+    // 인터넷 결합이어도 포스 세트는 무상이 아니라서 결합과 연결하지 않는다
+    var pos = !withPos ? 0 : Q.pos;
     var total = table + pos;
     var picked = (v.qBen || []).map(function (id) {
       return D.quote.benefits.filter(function (b) { return b.id === id && benShown(b); })[0];
@@ -244,7 +245,7 @@
     return {
       post: post, pre: pre, tables: tables, units: units, free: free, paid: units - free,
       table: table, unit: units ? table / units : 0, pos: pos, total: total,
-      sum: total * D.quote.months, master: master, picked: picked, pay: pay, extras: extras, bundle: !!v.qBundle, withPos: withPos
+      sum: total * D.quote.months, master: master, picked: picked, pay: pay, extras: extras, withPos: withPos
     };
   }
 
@@ -265,7 +266,7 @@
       postPrice: won(prices().post),
       prePrice: won(prices().pre),
       posPrice: won(prices().pos),
-      posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 쓰세요. ' : c.bundle ? '포스 세트는 인터넷 결합으로 무상이에요. ' : '포스 세트는 월 ' + won(prices().pos) + '원이에요. ',
+      posLine: !c.withPos ? '포스는 지금 쓰시는 걸 그대로 쓰세요. ' : '포스 세트는 월 ' + won(prices().pos) + '원이에요. ',
       freeLine: ok && c.free ? c.units + '대 하시면 ' + c.free + '대 금액은 빼드려서 대당 월 ' + won(c.unit) + '원꼴이에요. ' : '',
       setLine: c.withPos ? '에 포스기, 카드 단말기, 주방 프린터까지 해서' : '만 해서',
       powerLine: powerLine(),
@@ -273,7 +274,7 @@
       printerLine: printerLine(),
       benefits: (function () {
         var says = c.extras.map(function (b) { return b.say; }).filter(Boolean);
-        return (c.pay ? c.pay.say + ' ' : '') + (says.length ? '여기에 ' + says.join(', ') + '까지 넣어드릴게요. ' : '');
+        return (c.pay && c.pay.say ? c.pay.say + ' ' : '') + (says.length ? '여기에 ' + says.join(', ') + '까지 넣어드릴게요. ' : '');
       })(),
       open: fmtKoDate(v.open),
       date: fmtKoDate(v.date),
@@ -719,9 +720,9 @@
       ['주방 프린터', int('printers') ? int('printers') + '대' : (state.vars.printers === '0' ? '없음' : '')],
       ['인터넷·CCTV', v.net],
       ['포스', [v.posNow, posDetail()].filter(Boolean).join(' · ')],
-      ['포스 세트', c.withPos ? (v.qBundle ? '포함 (인터넷 결합 무상)' : '포함') : '미포함, 지금 포스 연동'],
-      ['결제', c.pay ? c.pay.label + ' (' + c.pay.note + ')' : ''],
-      ['혜택', [v.qBundle && c.withPos ? '인터넷 결합 (포스 세트 무상)' : ''].concat(c.extras.map(function (b) { return b.label; })).filter(Boolean).join(', ')],
+      ['포스 세트', c.withPos ? '포함' : '미포함, 지금 포스 연동'],
+      ['결제', c.pay ? c.pay.label + (c.pay.note ? ' (' + c.pay.note + ')' : '') : ''],
+      ['혜택', c.extras.map(function (b) { return b.label; }).filter(Boolean).join(', ')],
       ['월 합계', c.units ? won(c.total) + '원 (36개월)' : '']
     ].filter(function (r) { return r[1]; });
     if (!rows.length) return '';
@@ -730,7 +731,7 @@
     }).join('') + '</div>';
   }
 
-  // 견적 계산기: 대수, 무상 대수, 결합, 혜택을 고르면 금액 멘트가 바로 바뀐다
+  // 견적 계산기: 대수, 무상 대수, 혜택을 고르면 금액 멘트가 바로 바뀐다
   function renderCalc() {
     var v = state.vars, Q = D.quote, c0 = quoteCalc();
     var ben = v.qBen || [];
@@ -754,8 +755,6 @@
       '</div>' +
       '<div class="togs">' +
         '<button type="button" class="tog' + (posOn() ? ' is-on' : '') + '" data-qt="qPos">포스·단말기·프린터 포함</button>' +
-        (v.qNoNet ? '' : '<button type="button" class="tog' + (v.qBundle ? ' is-on' : '') + '" data-qt="qBundle">인터넷 결합 (포스 세트 무상)</button>' +
-          '') +
         (isNewStore() ? '<button type="button" class="tog' + (photoOn() ? ' is-on' : '') + '" data-qt="qPhoto">' + esc(Q.photo.label) + '</button>' : '') +
         Q.benefits.filter(benShown).map(function (b) {
           return '<button type="button" class="tog' + (ben.indexOf(b.id) !== -1 ? ' is-on' : '') + '" data-qb="' + b.id + '">' + esc(b.label) +
@@ -778,7 +777,7 @@
         (c.free ? c.units + '대 중 ' + c.free + '대 무상, 정가 ' + won(list) + '원' : '무상 없음, 정가 그대로') + '</small></div>' +
       '<div class="cs-item"><span>테이블오더</span><b>월 ' + won(c.table) + '원</b><small>' + parts.join(' + ') +
         (c.free ? ' 중 ' + c.free + '대 무상' : '') + ', 대당 ' + won(c.unit) + '원</small></div>' +
-      '<div class="cs-item"><span>포스·단말기·프린터</span><b>' + (!c.withPos ? '미포함' : c.pos ? '월 ' + won(c.pos) + '원' : '무상') + '</b><small>' + (!c.withPos ? '지금 쓰는 포스 연동' : c.pos ? '인터넷 결합 시 무상' : '인터넷 결합') + '</small></div>' +
+      '<div class="cs-item"><span>포스·단말기·프린터</span><b>' + (!c.withPos ? '미포함' : '월 ' + won(c.pos) + '원') + '</b><small>' + (!c.withPos ? '지금 쓰는 포스 연동' : '포스기, 카드 단말기, 주방 프린터') + '</small></div>' +
       '<div class="cs-item total"><span>월 합계</span><b>' + won(c.total) + '원</b><small>' + Q.months + '개월 ' + won(c.sum) + '원</small></div>';
   }
 
@@ -1063,8 +1062,7 @@
     var picked = state.vars.order || parseInt(state.vars.qPost, 10) || parseInt(state.vars.qPre, 10);
     $('.qb-total', bar).innerHTML = '<span class="qb-lab">월 합계</span>' + (!c.tables
       ? '<b class="qb-empty">대수 입력 전</b>'
-      : picked ? '<b>' + won(c.total) + '원</b><small>36개월 ' + won(c.sum) + '원' +
-        (c.withPos && !c.bundle && !state.vars.qNoNet ? ' · 인터넷 결합 시 -' + won(prices().pos) + '원' : c.withPos && c.bundle ? ' · 포스 무상(인터넷 결합)' : '') + '</small>'
+      : picked ? '<b>' + won(c.total) + '원</b><small>36개월 ' + won(c.sum) + '원</small>'
       : '<b class="qb-empty">선불·후불 선택 전</b>');
   }
   // 바에서 대수를 바꾸면 전원 방식, 거치대, 견적 계산기 대수까지 같이 맞춘다
