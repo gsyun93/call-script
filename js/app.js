@@ -40,7 +40,7 @@
   //   added: 새로 만든 노드 전체
   var custom = store.get('custom', null) || { nodes: {}, added: {} };
   // 꾹 눌러 바꿀 수 있는 노드 항목. 원래 값은 되돌리기용으로 따로 둔다
-  var NODE_FIELDS = ['label', 'nextLabel', 'options', 'choices', 'next'];
+  var NODE_FIELDS = ['label', 'nextLabel', 'nextSay', 'options', 'choices', 'next'];
   var ORIG = {};
   D.steps.forEach(function (st) {
     Object.keys(st.nodes).forEach(function (id) {
@@ -449,9 +449,10 @@
     if (o) return { key: 'obj.' + o.ob.id + '.' + o.i, text: objText(o.ob.id, o.i) };
     var r = resolve(target);
     // 목록 화면으로 가는 버튼에는 그 안에 있는 항목 이름을 적는다
-    if (r && r.node.kind === 'pick') return { list: r.node.choices.filter(function (id) { return r.step.nodes[id] && shown(r.step.nodes[id]); }).map(function (id) { return r.step.nodes[id].label; }).join(' · ') };
-    if (!r || !r.node.text) return null;
-    return { key: textKey(r.step.id, r.id), text: textOf(r.step.id, r.id) };
+    if (r && r.node.kind === 'pick' && !textOf(r.step.id, r.id)) return { list: r.node.choices.filter(function (id) { return r.step.nodes[id] && shown(r.step.nodes[id]); }).map(function (id) { return r.step.nodes[id].label; }).join(' · ') };
+    var t = r && textOf(r.step.id, r.id);
+    if (!t) return null;
+    return { key: textKey(r.step.id, r.id), text: t };
   }
 
   // 목록 화면에서 아직 안 채운 칸
@@ -601,13 +602,13 @@
     return '<span class="say"' + (say.key ? ' data-say="' + say.key + '"' : '') + '>' + fill(say.text, true) + '</span>';
   }
 
-  function choiceBtn(key, target, label, cls, tag, extra) {
+  function choiceBtn(key, target, label, cls, tag, extra, own) {
     var eff = autoTarget(target);
     if (eff !== target) {
       var pr = resolve(target);
       label = esc(pr.node.nextLabel || nextLabel(pr.node.next, pr.node));
     }
-    var say = sayOf(eff);
+    var say = own ? { text: own } : sayOf(eff);
     return '<button type="button" class="choice ' + (cls || '') + (say ? ' has-say' : '') + '" data-go="' + esc(target) + '" data-key="' + key + '"' + (extra || '') +
       (say && say.key ? ' data-edit="' + say.key + '"' : '') + '>' +
       '<kbd>' + key + '</kbd><span class="c-body"><b>' + label + (tag || '') + '</b>' + sayHtml(say) + '</span></button>';
@@ -839,10 +840,10 @@
       // 일부만 채운 질문도 채운 값은 보여준다
       var part = !filled && n.slots && n.slots.some(function (sl) { return slotValue(sl); });
       var done = filled || (!n.slots && (p.indexOf(id) !== -1 || answerOf(id)));
-      var say = n.kind === 'pick' ? { list: n.choices.filter(function (c) { return s.nodes[c] && shown(s.nodes[c]); }).map(function (c) { return s.nodes[c].label; }).join(' · ') }
+      var say = n.kind === 'pick' && !textOf(s.id, id) ? { list: n.choices.filter(function (c) { return s.nodes[c] && shown(s.nodes[c]); }).map(function (c) { return s.nodes[c].label; }).join(' · ') }
         : filled || part ? { list: n.slots.filter(function (sl) { return slotValue(sl); }).map(function (sl) { return (sl.prefix || '') + slotValue(sl); }).join(' · ') +
             (part ? ' · ' + n.slots.filter(function (sl) { return !slotValue(sl); }).map(function (sl) { return sl.label; }).join(', ') + ' 남음' : '') }
-        : (n.text ? { key: textKey(s.id, id), text: textOf(s.id, id) } : null);
+        : (textOf(s.id, id) ? { key: textKey(s.id, id), text: textOf(s.id, id) } : null);
       return '<button type="button" class="tile' + (say ? ' has-say' : '') + (done ? ' is-done' : '') + (filled ? ' is-filled' : '') + '" data-go="' + id + '" data-key="' + no + '" data-ci="' + ci + '"' +
         (say && say.key ? ' data-edit="' + say.key + '"' : '') + '>' +
         '<span class="t-head"><kbd>' + no + '</kbd><b>' + esc(n.label || '') + '</b></span>' +
@@ -855,7 +856,7 @@
       html += '<div class="choices"><button type="button" class="choice primary is-locked" disabled><kbd>Enter</kbd><span class="c-body"><b>' +
         esc(nextLabel(cur.next, cur)) + '</b><span class="say list">남은 항목: ' + esc(missing.join(' · ')) + '</span></span></button></div>';
     } else if (cur.next) {
-      html += '<div class="choices">' + choiceBtn('Enter', cur.next, esc(nextLabel(cur.next, cur)), 'primary', '', ' data-nx="1"') + '</div>';
+      html += '<div class="choices">' + choiceBtn('Enter', cur.next, esc(nextLabel(cur.next, cur)), 'primary', '', ' data-nx="1"', cur.nextSay) + '</div>';
     }
     return html + navRow();
   }
@@ -889,7 +890,7 @@
     var key = 1, list = '', prev = '', next = '', reads = '';
     var nextDir = cur.next ? listDir(cur.next, true) : '';
     // 숫자 칸 묶음 화면의 완료 버튼은 가운데 정렬, 다 채우기 전엔 눌리지 않게
-    if (cur.next && !nextDir) list += choiceBtn(key++, cur.next, esc(nextLabel(cur.next, cur)), 'primary' + (cur.form ? ' form-done' : ''), '', ' data-nx="1"' + (cur.form && !formOk(cur) ? ' disabled' : ''));
+    if (cur.next && !nextDir) list += choiceBtn(key++, cur.next, esc(nextLabel(cur.next, cur)), 'primary' + (cur.form ? ' form-done' : ''), '', ' data-nx="1"' + (cur.form && !formOk(cur) ? ' disabled' : ''), cur.nextSay);
     var dirs = [];
     (cur.options || []).forEach(function (o, i) {
       var ins = optInputs(o);
@@ -904,7 +905,7 @@
           }).join('') +
           '<button type="button" class="go-btn" data-optgo="' + i + '">다음</button>' +
           // 넘어가서 바로 읽을 질문이 있으면 칸 아래에 (목록으로 가는 건 빼고)
-          (function () { var sy = sayOf(o.to); return sy && !sy.list ? '<div class="opt-say">' + sayHtml(sy) + '</div>' : ''; })() +
+          (function () { var sy = o.say ? { text: o.say } : sayOf(o.to); return sy && !sy.list ? '<div class="opt-say">' + sayHtml(sy) + '</div>' : ''; })() +
           '</div>';
         return;
       }
@@ -915,7 +916,7 @@
           '<kbd>' + (key++) + '</kbd><span class="c-body"><b>' + esc(o.label) + '</b>' + (o.say ? sayHtml({ text: o.say }) : '') + '</span></button>';
         return;
       }
-      if (d) { dirs.push({ dir: d, to: o.to, label: o.label, extra: ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : '') }); return; }
+      if (d) { dirs.push({ dir: d, to: o.to, label: o.label, own: o.say, extra: ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : '') }); return; }
       // 읽기 전용 화면: 고객 답별 안내를 누르지 않는 카드로
       if (cur.readOnly) {
         var sy = sayOf(o.to);
@@ -924,16 +925,16 @@
       }
       var isObj = o.to.indexOf('obj:') === 0;
       var cls = (isObj ? 'is-obj' : '') + (wentFrom(p, curId, o.to) ? ' is-done' : '');
-      var cb = choiceBtn(key++, o.to, esc(o.label), cls, isObj ? '<em class="obj">반론 답변</em>' : '', ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : ''));
+      var cb = choiceBtn(key++, o.to, esc(o.label), cls, isObj ? '<em class="obj">반론 답변</em>' : '', ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : ''), o.say);
       // then: 멘트는 to 화면 것을 보여주고, 누르면 then으로 간다 (예: 바로 결과 기록)
       if (o.then) cb = cb.replace('data-go="' + esc(o.to) + '"', 'data-go="' + esc(o.then) + '"');
       list += cb;
     });
-    if (nextDir) dirs.push({ dir: nextDir, to: cur.next, label: nextLabel(cur.next, cur), extra: ' data-nx="1" data-enter="1"' });
+    if (nextDir) dirs.push({ dir: nextDir, to: cur.next, label: nextLabel(cur.next, cur), own: cur.nextSay, extra: ' data-nx="1" data-enter="1"' });
     // 번호는 왼쪽(←)부터
     dirs.sort(function (a, b) { return (a.dir === 'prev' ? 0 : 1) - (b.dir === 'prev' ? 0 : 1); });
     dirs.forEach(function (d) {
-      var b = choiceBtn(key++, d.to, esc(d.label), 'dir dir-' + d.dir, '', d.extra);
+      var b = choiceBtn(key++, d.to, esc(d.label), 'dir dir-' + d.dir, '', d.extra, d.own);
       if (d.dir === 'prev') prev += b; else next += b;
     });
     if (reads) html += '<div class="refs top">' + reads + '</div>';
@@ -1220,7 +1221,7 @@
       bindLongPress(el, function () {
         el.dataset.lp = '1';
         openItemEditor({
-          title: '질문 수정', label: n.label || '', sayKey: sayKeyOf(el),
+          title: '질문 수정', label: n.label || '', sayKey: sayKeyOf(el) || textKey(s.id, id),
           onLabel: function (v) { n.label = v; saveNode(s, id); },
           onDelete: function () { cur.choices.splice(i, 1); saveNode(s, curId); },
           onMove: function (d) { if (swap(cur.choices, i, d)) saveNode(s, curId); },
@@ -1233,7 +1234,8 @@
       bindLongPress(el, function () {
         el.dataset.lp = '1';
         openItemEditor({
-          title: '버튼 수정', label: o.label, sayKey: sayKeyOf(el, o.to),
+          title: '버튼 수정', label: o.label, sayKey: o.say ? null : sayKeyOf(el, o.to), ownSay: o.say || '',
+          onSay: function (v) { if (v) o.say = v; else delete o.say; saveNode(s, curId); },
           onLabel: function (v) { o.label = v; saveNode(s, curId); },
           onDelete: function () { cur.options.splice(i, 1); saveNode(s, curId); },
           onMove: function (d) { if (swap(cur.options, i, d)) saveNode(s, curId); },
@@ -1245,7 +1247,8 @@
       bindLongPress(el, function () {
         el.dataset.lp = '1';
         openItemEditor({
-          title: '버튼 수정', label: shownLabel(el) || nextLabel(cur.next, cur), sayKey: sayKeyOf(el),
+          title: '버튼 수정', label: shownLabel(el) || nextLabel(cur.next, cur), sayKey: cur.nextSay ? null : sayKeyOf(el), ownSay: cur.nextSay || '',
+          onSay: function (v) { if (v) cur.nextSay = v; else delete cur.nextSay; saveNode(s, curId); },
           onLabel: function (v) { cur.nextLabel = v; saveNode(s, curId); },
           onDelete: function () { cur.next = ''; saveNode(s, curId); },
           onReset: function () { restoreNode(s, curId); }
@@ -1286,6 +1289,9 @@
             if (!v || v === orig) delete state.edits[c.sayKey];
             else state.edits[c.sayKey] = v;
             saveEdits();
+          } else if (c.onSay) {
+            var own = $('[data-k="say"]', m).value.trim();
+            if (own !== c.ownSay) c.onSay(own);
           }
           done('저장했습니다');
         } else if (a === 'del') {
@@ -1315,8 +1321,8 @@
     m._o = o;
     $('h2', m).textContent = o.title;
     $('[data-k="label"]', m).value = o.label;
-    $$('.say-field', m).forEach(function (el) { el.hidden = !o.sayKey; });
-    $('[data-k="say"]', m).value = o.sayKey ? textByKey(o.sayKey) || '' : '';
+    $$('.say-field', m).forEach(function (el) { el.hidden = !o.sayKey && !o.onSay; });
+    $('[data-k="say"]', m).value = o.sayKey ? textByKey(o.sayKey) || '' : (o.ownSay || '');
     $('[data-i="up"]', m).hidden = $('[data-i="down"]', m).hidden = !o.onMove;
     m.classList.add('is-on');
     setTimeout(function () { $('[data-k="label"]', m).focus(); }, 30);
