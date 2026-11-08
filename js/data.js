@@ -433,8 +433,7 @@ window.TOOL_DATA = {
         r1: {
           kind: 'say',
           options: [
-            { label: '진행할게요 (운영 중)', to: 'r_run', set: { status: '운영 중' } },
-            { label: '진행할게요 (오픈 준비 중)', to: 'r_new', set: { status: '오픈 준비 중' } },
+            { label: '진행할게요', to: 'r_new' },
             { label: '아직 못 봤어요', to: 'r_unseen' },
             { label: '금액이 부담돼요', to: 'r_price' },
             { label: '타사랑 비교 중', to: 'r_comp' },
@@ -444,19 +443,20 @@ window.TOOL_DATA = {
             { label: '필요 없어요', to: 'r_no', then: 'end' }
           ]
         },
-        r_run: {
+        // 진행할게요: 운영 중·오픈 준비 중 구분 없이 하나 (r_run은 예전 편집이 가리키던 같은 화면)
+        r_new: {
           kind: 'say',
-          text: '좋습니다. 영업에 지장 없게 설치 날짜부터 잡을게요. 언제가 편하세요?',
+          text: '좋습니다. 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
           slots: [{ key: 'install', label: '도입 예정일' }],
           fields: [{ key: 'install', label: '도입 예정일', type: 'date' }],
           next: 'r_docs',
           nextLabel: '날짜 잡았어요'
         },
-        r_new: {
+        r_run: {
           kind: 'say',
-          text: '좋습니다. 주민번호 뒷자리 가리시고 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
-          slots: [{ key: 'open', label: '오픈 예정일' }],
-          fields: [{ key: 'open', label: '오픈 예정일', type: 'date' }],
+          text: '좋습니다. 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
+          slots: [{ key: 'install', label: '도입 예정일' }],
+          fields: [{ key: 'install', label: '도입 예정일', type: 'date' }],
           next: 'r_docs',
           nextLabel: '날짜 잡았어요'
         },
@@ -465,18 +465,18 @@ window.TOOL_DATA = {
           kind: 'say',
           text: '사업자등록증, 신분증 사본, 세금계산서 이메일 세 가지만 카톡으로 보내주세요.'
         },
+        // 아직 못 봤어요: 다시 보내드리고 재통화 날짜를 잡는다 (재통화 날짜 화면처럼 멘트와 날짜·시간 칸)
         r_unseen: {
+          label: '재통화 날짜',
           kind: 'say',
-          text: '그럼 핵심만 말씀드릴게요. 포스, 설치비, 3년 A/S까지 다 들어간 금액이에요.',
-          next: 'r1',
-          nextLabel: '고객 답 다시 듣기'
+          text: '대표님 그러면 확인 편하시도록 제가 통화 끝나고 다시 보내드리겠습니다. 확인 해보시고 제가 {date} {time}에 다시 한번 전화 올리겠습니다.',
+          fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }]
         },
         r_price: {
           kind: 'say',
           text: '한 달에 몇만 원 차이면 손님 몇 팀만 더 오셔도 되는 금액이에요. 저희는 네이버랑 협업해서 네이버 지도 상위 노출이 돼요.',
           options: [
-            { label: '진행할게요 (운영 중)', to: 'r_run', set: { status: '운영 중' } },
-            { label: '진행할게요 (오픈 준비 중)', to: 'r_new', set: { status: '오픈 준비 중' } },
+            { label: '진행할게요', to: 'r_new' },
             { label: '그래도 망설인대요', to: 'r_price2' }
           ]
         },
@@ -484,8 +484,7 @@ window.TOOL_DATA = {
           kind: 'say',
           text: '영수증 리뷰도 영수증 없이 주문 끝나고 자리에서 바로 쓰세요. 리뷰가 쌓이면 손님이 더 와요.',
           options: [
-            { label: '진행할게요 (운영 중)', to: 'r_run', set: { status: '운영 중' } },
-            { label: '진행할게요 (오픈 준비 중)', to: 'r_new', set: { status: '오픈 준비 중' } },
+            { label: '진행할게요', to: 'r_new' },
             { label: '재통화 날짜', to: 'r_end' }
           ]
         },
@@ -495,8 +494,7 @@ window.TOOL_DATA = {
           refs: [{ label: 'KT 하이오더', obj: 'kt' }, { label: '티오더', obj: 'torder' }, { label: '토스', obj: 'toss' }],
           fields: [{ key: 'rival', label: '업체명', type: 'text' }],
           options: [
-            { label: '진행할게요 (운영 중)', to: 'r_run', set: { status: '운영 중' } },
-            { label: '진행할게요 (오픈 준비 중)', to: 'r_new', set: { status: '오픈 준비 중' } },
+            { label: '진행할게요', to: 'r_new' },
             { label: '재통화 날짜', to: 'r_end' }
           ]
         },
