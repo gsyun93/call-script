@@ -1029,8 +1029,11 @@
         '<button type="button" class="qb-step" data-qf="-1"' + (c.free <= 0 ? ' disabled' : '') + ' aria-label="무상 대수 줄이기">-</button>' +
         '<b class="qb-free">' + c.free + '</b>' +
         '<button type="button" class="qb-step" data-qf="1"' + (c.free >= c.units ? ' disabled' : '') + ' aria-label="무상 대수 늘리기">+</button></span>' +
-      '<span class="qb-item qb-total"><span class="qb-lab">월 합계</span><b>' + won(c.total) + '원</b>' +
-        '<small>36개월 ' + won(c.sum) + '원</small></span>';
+      // 금액은 선불·후불을 정한 뒤에 (견적 계산기에서 대수를 나눠 넣어도 정한 것으로 본다)
+      (state.vars.order || parseInt(state.vars.qPost, 10) || parseInt(state.vars.qPre, 10)
+        ? '<span class="qb-item qb-total"><span class="qb-lab">월 합계</span><b>' + won(c.total) + '원</b>' +
+          '<small>36개월 ' + won(c.sum) + '원</small></span>'
+        : '<span class="qb-item qb-total"><span class="qb-lab">월 합계</span><b class="qb-empty">선불·후불 선택 전</b></span>');
   }
   function bindQBar() {
     var bar = $('#qbar');
