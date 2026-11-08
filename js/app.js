@@ -1837,14 +1837,14 @@
     $('#pdSend').hidden = true;
     pdMsg('');
   }
-  // 파이프드라이브 노트: 감도와 이유, 메모
+  // 파이프드라이브 노트: 이유, 메모
   function pdNote() {
+    // 감도는 딜 항목(★리드 감도)으로 따로 들어가서 노트에는 이유만
     var f = $('#recordForm');
-    var sens = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
     var reasons = $$('input[name="reason"]:checked', f).map(function (c) { return c.value; });
     if (f.reasonText.value.trim()) reasons.push(f.reasonText.value.trim());
     var lines = [];
-    if (sens) lines.push('감도: ' + sens + (reasons.length ? ' (' + reasons.join(', ') + ')' : ''));
+    if (reasons.length) lines.push('이유: ' + reasons.join(', '));
     if (f.memo.value.trim()) lines.push(f.memo.value.trim());
     return lines.join('\n');
   }
