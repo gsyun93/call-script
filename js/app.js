@@ -216,13 +216,13 @@
       if (String(v.order || '').indexOf('선불') === 0) pre = parseInt(v.n, 10) || 0;
       else post = parseInt(v.n, 10) || 0;
     }
-    var units = post + pre;
-    // 무상 대수는 기본 0, 직접 넣은 만큼만
-    var free = parseInt(v.qFree, 10) || 0;
-    free = Math.min(free, units);
+    // tables: 테이블에 놓는 대수. 마스터 태블릿은 아래에서 대수와 무상 대수에 같이 더한다
+    var tables = post + pre;
+    // 무상 대수(qFree)는 기본 0, 직접 넣은 만큼만 (마스터 태블릿은 빼고 센 값)
+    var freeT = Math.min(parseInt(v.qFree, 10) || 0, tables);
     // 무상 대수는 대수가 더 많은 쪽 단가로 뺀다
     var freePrice = pre > post ? Q.pre : Q.post;
-    var table = post * Q.post + pre * Q.pre - free * freePrice;
+    var table = post * Q.post + pre * Q.pre - freeT * freePrice;
     var withPos = posOn();
     var pos = !withPos || v.qBundle ? 0 : Q.pos;
     var total = table + pos;
@@ -233,15 +233,16 @@
     // 견적 멘트와 요약에 들어가는 혜택 (결제 방법은 따로)
     var extras = [];
     if (photoOn()) extras.push({ label: D.quote.photo.label, say: D.quote.photo.say });
-    // 타사 포스를 쓰면 마스터 태블릿 (기본 1대, 무상)
-    var master = withPos ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
-    if (master) extras.push({ label: D.quote.master.label + ' ' + master + '대 (무상)', say: D.quote.master.say + ' ' + master + '대' });
-    var batt = battCount(units);
+    // 타사 포스를 쓰면 마스터 태블릿 (기본 1대). 무상이라 대수와 무상 대수에 같이 센다
+    var master = withPos || !tables ? 0 : (v.qMaster === undefined || v.qMaster === '' ? 1 : (parseInt(v.qMaster, 10) || 0));
+    if (master) extras.push({ label: D.quote.master.label + ' ' + master + '대 (무상 대수에 포함)', say: '' });
+    var units = tables + master, free = freeT + master;
+    var batt = battCount(tables);
     // 보조배터리는 요약에만 (멘트에는 안 넣음)
     if (batt) extras.push({ label: '보조배터리 ' + batt + '개', say: '' });
     extras = extras.concat(picked);
     return {
-      post: post, pre: pre, units: units, free: free, paid: units - free,
+      post: post, pre: pre, tables: tables, units: units, free: free, paid: units - free,
       table: table, unit: units ? table / units : 0, pos: pos, total: total,
       sum: total * D.quote.months, master: master, picked: picked, pay: pay, extras: extras, bundle: !!v.qBundle, withPos: withPos
     };
@@ -713,7 +714,7 @@
     var rows = [
       ['매장', [v.store, v.region, v.status, v.biz].filter(Boolean).join(' · ')],
       ['주문 방식', v.order],
-      ['테이블오더', c.units ? c.units + '대' + (v.power ? ' (' + v.power + ')' : '') : ''],
+      ['테이블오더', c.units ? c.units + '대' + (c.master ? ' (테이블 ' + c.tables + ', 마스터 태블릿 ' + c.master + ')' : v.power ? ' (' + v.power + ')' : '') : ''],
       ['거치대', v.stand],
       ['주방 프린터', int('printers') ? int('printers') + '대' : (state.vars.printers === '0' ? '없음' : '')],
       ['인터넷·CCTV', v.net],
@@ -743,7 +744,7 @@
         num('qPost', '후불형 대수', String(c0.post)) +
         num('qPre', '선불형 대수', String(c0.pre)) +
         num('qFree', '무상 대수', String(c0.free)) +
-        num('qBatt', '보조배터리 (개)', String(battCount(c0.units))) +
+        num('qBatt', '보조배터리 (개)', String(battCount(c0.tables))) +
         (posOn() ? '' : num('qMaster', '마스터 태블릿', String(c0.master))) +
       '</div>' +
       '<div class="togs"><span class="tog-label">결제</span>' +
@@ -771,6 +772,7 @@
     var parts = [];
     if (c.post) parts.push('후불 ' + c.post + '대');
     if (c.pre) parts.push('선불 ' + c.pre + '대');
+    if (c.master) parts.push('마스터 태블릿 ' + c.master + '대');
     var list = c.pre > c.post ? prices().pre : prices().post;
     return '<div class="cs-item unit"><span>무상 포함 대당</span><b>월 ' + won(c.unit) + '원</b><small>' +
         (c.free ? c.units + '대 중 ' + c.free + '대 무상, 정가 ' + won(list) + '원' : '무상 없음, 정가 그대로') + '</small></div>' +
@@ -789,20 +791,22 @@
       if (sb) sb.innerHTML = renderSummary();
       // 보조배터리를 직접 안 넣었으면 대수가 바뀔 때 같이 맞춘다
       var bi = $('[data-q="qBatt"]', box);
-      if (bi && bi !== document.activeElement && (state.vars.qBatt === undefined || state.vars.qBatt === '')) bi.value = battCount(quoteCalc().units);
+      if (bi && bi !== document.activeElement && (state.vars.qBatt === undefined || state.vars.qBatt === '')) bi.value = battCount(quoteCalc().tables);
       updateSays();
       renderMessages();
     }
     $$('[data-q]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         state.vars[inp.dataset.q] = inp.value;
+        // 무상 대수 칸은 마스터 태블릿까지 센 값이라, 저장은 마스터 태블릿을 빼고
+        if (inp.dataset.q === 'qFree' && inp.value !== '') state.vars.qFree = String(Math.max(0, (parseInt(inp.value, 10) || 0) - quoteCalc().master));
         // 후불·선불 대수는 화면에 보이는 두 값을 같이 저장해야 합계가 맞는다
         if (inp.dataset.q === 'qPost' || inp.dataset.q === 'qPre') {
           $$('[data-q="qPost"], [data-q="qPre"]', box).forEach(function (x) { state.vars[x.dataset.q] = x.value; });
         }
         // 다른 멘트에서 쓰는 대수도 같이 맞춘다
         var c = quoteCalc();
-        if (inp.dataset.q !== 'qFree' && inp.dataset.q !== 'qBatt' && c.units) state.vars.n = String(c.units);
+        if (inp.dataset.q !== 'qFree' && inp.dataset.q !== 'qBatt' && inp.dataset.q !== 'qMaster' && c.tables) state.vars.n = String(c.tables);
         changed();
       });
     });
@@ -1027,7 +1031,7 @@
     if (!$('[data-qn]', bar)) {
       bar.innerHTML =
         '<span class="qb-item"><span class="qb-lab">대수</span>' +
-          '<input type="number" class="qb-units" data-qn min="0" max="99" inputmode="numeric" placeholder="입력 전" aria-label="대수"><span class="qb-unit">대</span></span>' +
+          '<input type="number" class="qb-units" data-qn min="0" max="99" inputmode="numeric" placeholder="입력 전" aria-label="대수"><span class="qb-unit">대</span><small class="qb-master"></small></span>' +
         '<span class="qb-item"><span class="qb-lab">무상</span>' +
           '<button type="button" class="qb-step" data-qf="-1" aria-label="무상 대수 줄이기">-</button>' +
           '<b class="qb-free"></b>' +
@@ -1036,13 +1040,14 @@
     }
     var c = quoteCalc();
     var inp = $('[data-qn]', bar);
-    if (inp !== document.activeElement) inp.value = c.units ? c.units : '';
+    if (inp !== document.activeElement) inp.value = c.tables ? c.tables : '';
+    $('.qb-master', bar).textContent = c.master ? '+ 마스터 태블릿 ' + c.master : '';
     $('.qb-free', bar).textContent = c.free;
-    $('[data-qf="-1"]', bar).disabled = c.free <= 0;
+    $('[data-qf="-1"]', bar).disabled = c.free <= c.master;
     $('[data-qf="1"]', bar).disabled = c.free >= c.units;
     // 금액은 선불·후불을 정한 뒤에 (견적 계산기에서 대수를 나눠 넣어도 정한 것으로 본다)
     var picked = state.vars.order || parseInt(state.vars.qPost, 10) || parseInt(state.vars.qPre, 10);
-    $('.qb-total', bar).innerHTML = '<span class="qb-lab">월 합계</span>' + (!c.units
+    $('.qb-total', bar).innerHTML = '<span class="qb-lab">월 합계</span>' + (!c.tables
       ? '<b class="qb-empty">대수 입력 전</b>'
       : picked ? '<b>' + won(c.total) + '원</b><small>36개월 ' + won(c.sum) + '원' +
         (c.withPos && !c.bundle && !state.vars.qNoNet ? ' · 인터넷 결합 시 -' + won(prices().pos) + '원' : c.withPos && c.bundle ? ' · 포스 무상(인터넷 결합)' : '') + '</small>'
@@ -1050,7 +1055,7 @@
   }
   // 바에서 대수를 바꾸면 전원 방식, 거치대, 견적 계산기 대수까지 같이 맞춘다
   function setUnits(n) {
-    var v = state.vars, c = quoteCalc(), d = n - c.units;
+    var v = state.vars, c = quoteCalc(), d = n - c.tables;
     if (!d) return;
     // 견적 계산기에서 후불·선불을 나눠 넣었으면 주문 방식 쪽(없으면 후불)에서 늘리고 줄인다
     if (parseInt(v.qPost, 10) || parseInt(v.qPre, 10)) {
@@ -1079,7 +1084,7 @@
     var box = $('#script');
     if (full) { renderScript(); renderMessages(); return; }
     var fi = $('[data-q="qFree"]', box);
-    if (fi) fi.value = state.vars.qFree;
+    if (fi) fi.value = quoteCalc().free;
     var cs = $('#calcSum', box);
     if (cs) cs.innerHTML = calcSum();
     var sb = $('#summaryBox', box);
@@ -1095,7 +1100,8 @@
       var b = e.target.closest('[data-qf]');
       if (!b || b.disabled) return;
       var c = quoteCalc();
-      state.vars.qFree = String(Math.max(0, Math.min(c.units, c.free + Number(b.dataset.qf))));
+      var all = Math.max(c.master, Math.min(c.units, c.free + Number(b.dataset.qf)));
+      state.vars.qFree = String(all - c.master);
       saveVars();
       refreshQuoteViews(false);
     });

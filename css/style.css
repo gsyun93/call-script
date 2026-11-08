@@ -136,6 +136,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .qb-units:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .qb-units::placeholder { font-size: 13px; font-weight: 600; color: var(--muted); }
 .qb-unit { font-size: 15px; font-weight: 700; color: var(--ink); margin-left: -4px; }
+.qb-master { font-size: 12px; color: var(--ink-2); }
+.qb-master:empty { display: none; }
 .qb-step {
   width: 30px; height: 30px; border-radius: 50%;
   border: 1px solid var(--line); background: var(--paper); color: var(--ink);
