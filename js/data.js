@@ -449,16 +449,16 @@ window.TOOL_DATA = {
           text: '좋습니다. 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
           slots: [{ key: 'install', label: '도입 예정일' }],
           fields: [{ key: 'install', label: '도입 예정일', type: 'date' }],
-          next: 'r_docs',
-          nextLabel: '날짜 잡았어요'
+          // 서류 안내 멘트를 버튼에서 읽고, 누르면 바로 통화 결과 기록 창
+          options: [{ label: '날짜 잡았어요', to: 'r_docs', then: 'end' }]
         },
         r_run: {
           kind: 'say',
           text: '좋습니다. 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
           slots: [{ key: 'install', label: '도입 예정일' }],
           fields: [{ key: 'install', label: '도입 예정일', type: 'date' }],
-          next: 'r_docs',
-          nextLabel: '날짜 잡았어요'
+          // 서류 안내 멘트를 버튼에서 읽고, 누르면 바로 통화 결과 기록 창
+          options: [{ label: '날짜 잡았어요', to: 'r_docs', then: 'end' }]
         },
         r_docs: {
           label: '서류 안내',

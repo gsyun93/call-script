@@ -1535,7 +1535,8 @@
       Object.keys(s.nodes).forEach(function (id) {
         (shown(s.nodes[id]) && s.nodes[id].slots || []).forEach(function (sl) {
           var sv = slotValue(sl);
-          if (sv) lines.push(sl.label + ': ' + sv);
+          // 같은 값을 받는 화면이 둘이어도 한 줄만
+          if (sv && lines.indexOf(sl.label + ': ' + sv) === -1) lines.push(sl.label + ': ' + sv);
         });
       });
     });
