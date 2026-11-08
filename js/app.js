@@ -1014,47 +1014,95 @@
   }
 
   // ---------- 견적 미리보기 바 ----------
-  // 대수, 무상 대수(바에서 바로 조절), 월 합계. 견적 계산기와 같은 값(qFree)을 쓴다
+  // 대수(바에서 바로 고침), 무상 대수(-/+), 월 합계. 견적 계산기와 같은 값을 쓴다
   function renderQBar() {
     var bar = $('#qbar');
     if (!bar) return;
-    var c = quoteCalc();
-    if (!c.units) {
-      bar.innerHTML = '<span class="qb-item"><span class="qb-lab">대수</span><b class="qb-empty">입력 전</b></span>';
-      return;
+    if (!$('[data-qn]', bar)) {
+      bar.innerHTML =
+        '<span class="qb-item"><span class="qb-lab">대수</span>' +
+          '<input type="number" class="qb-units" data-qn min="0" max="99" inputmode="numeric" placeholder="입력 전" aria-label="대수"><span class="qb-unit">대</span></span>' +
+        '<span class="qb-item"><span class="qb-lab">무상</span>' +
+          '<button type="button" class="qb-step" data-qf="-1" aria-label="무상 대수 줄이기">-</button>' +
+          '<b class="qb-free"></b>' +
+          '<button type="button" class="qb-step" data-qf="1" aria-label="무상 대수 늘리기">+</button></span>' +
+        '<span class="qb-item qb-total"></span>';
     }
-    bar.innerHTML =
-      '<span class="qb-item"><span class="qb-lab">대수</span><b>' + c.units + '대</b></span>' +
-      '<span class="qb-item"><span class="qb-lab">무상</span>' +
-        '<button type="button" class="qb-step" data-qf="-1"' + (c.free <= 0 ? ' disabled' : '') + ' aria-label="무상 대수 줄이기">-</button>' +
-        '<b class="qb-free">' + c.free + '</b>' +
-        '<button type="button" class="qb-step" data-qf="1"' + (c.free >= c.units ? ' disabled' : '') + ' aria-label="무상 대수 늘리기">+</button></span>' +
-      // 금액은 선불·후불을 정한 뒤에 (견적 계산기에서 대수를 나눠 넣어도 정한 것으로 본다)
-      (state.vars.order || parseInt(state.vars.qPost, 10) || parseInt(state.vars.qPre, 10)
-        ? '<span class="qb-item qb-total"><span class="qb-lab">월 합계</span><b>' + won(c.total) + '원</b>' +
-          '<small>36개월 ' + won(c.sum) + '원</small></span>'
-        : '<span class="qb-item qb-total"><span class="qb-lab">월 합계</span><b class="qb-empty">선불·후불 선택 전</b></span>');
+    var c = quoteCalc();
+    var inp = $('[data-qn]', bar);
+    if (inp !== document.activeElement) inp.value = c.units ? c.units : '';
+    $('.qb-free', bar).textContent = c.free;
+    $('[data-qf="-1"]', bar).disabled = c.free <= 0;
+    $('[data-qf="1"]', bar).disabled = c.free >= c.units;
+    // 금액은 선불·후불을 정한 뒤에 (견적 계산기에서 대수를 나눠 넣어도 정한 것으로 본다)
+    var picked = state.vars.order || parseInt(state.vars.qPost, 10) || parseInt(state.vars.qPre, 10);
+    $('.qb-total', bar).innerHTML = '<span class="qb-lab">월 합계</span>' + (!c.units
+      ? '<b class="qb-empty">대수 입력 전</b>'
+      : picked ? '<b>' + won(c.total) + '원</b><small>36개월 ' + won(c.sum) + '원</small>'
+      : '<b class="qb-empty">선불·후불 선택 전</b>');
+  }
+  // 바에서 대수를 바꾸면 전원 방식, 거치대, 견적 계산기 대수까지 같이 맞춘다
+  function setUnits(n) {
+    var v = state.vars, c = quoteCalc(), d = n - c.units;
+    if (!d) return;
+    // 견적 계산기에서 후불·선불을 나눠 넣었으면 주문 방식 쪽(없으면 후불)에서 늘리고 줄인다
+    if (parseInt(v.qPost, 10) || parseInt(v.qPre, 10)) {
+      var k = String(v.order || '').indexOf('선불') === 0 ? 'qPre' : 'qPost', o = k === 'qPre' ? 'qPost' : 'qPre';
+      var nk = (parseInt(v[k], 10) || 0) + d;
+      if (nk < 0) { v[o] = String(Math.max(0, (parseInt(v[o], 10) || 0) + nk)); nk = 0; }
+      v[k] = String(nk);
+    }
+    v.n = String(n);
+    // 전원 방식: 보조배터리형만 넣었으면 그쪽, 아니면 전원형에서 맞춘다
+    var w = int('nWire'), b = int('nBatt');
+    if (b && !w) v.nBatt = String(n);
+    else { v.nWire = String(Math.max(0, n - b)); if (n < b) v.nBatt = String(n); }
+    // 거치대: 직접 고치지 않았으면 고정형이 남은 대수
+    if (!v.standEdited) {
+      var others = int('sDesk') + int('sCover') + int('sWall');
+      v.sFix = String(Math.max(0, n - others));
+    }
+    if (int('qFree') > n) v.qFree = String(n);
+    var n3 = findStep('talk') && findStep('talk').nodes.n3;
+    if (n3 && n3.form) formRecalc(n3);
+    v.n = String(n);
+    saveVars();
+  }
+  function refreshQuoteViews(full) {
+    var box = $('#script');
+    if (full) { renderScript(); renderMessages(); return; }
+    var fi = $('[data-q="qFree"]', box);
+    if (fi) fi.value = state.vars.qFree;
+    var cs = $('#calcSum', box);
+    if (cs) cs.innerHTML = calcSum();
+    var sb = $('#summaryBox', box);
+    if (sb) sb.innerHTML = renderSummary();
+    updateSays();
+    renderMessages();
   }
   function bindQBar() {
     var bar = $('#qbar');
     if (!bar) return;
+    renderQBar();
     bar.addEventListener('click', function (e) {
       var b = e.target.closest('[data-qf]');
       if (!b || b.disabled) return;
       var c = quoteCalc();
-      var nv = Math.max(0, Math.min(c.units, c.free + Number(b.dataset.qf)));
-      state.vars.qFree = String(nv);
+      state.vars.qFree = String(Math.max(0, Math.min(c.units, c.free + Number(b.dataset.qf))));
       saveVars();
-      // 견적 계산기가 열려 있으면 칸, 합계, 요약도 같이
+      refreshQuoteViews(false);
+    });
+    bar.addEventListener('input', function (e) {
+      if (!e.target.matches('[data-qn]')) return;
+      var n = parseInt(e.target.value, 10);
+      if (isNaN(n) || n < 0) return;
+      setUnits(Math.min(99, n));
+      // 숫자 칸이나 계산기가 있는 화면은 칸 값까지 다시 그린다
       var box = $('#script');
-      var fi = $('[data-q="qFree"]', box);
-      if (fi) fi.value = state.vars.qFree;
-      var cs = $('#calcSum', box);
-      if (cs) cs.innerHTML = calcSum();
-      var sb = $('#summaryBox', box);
-      if (sb) sb.innerHTML = renderSummary();
-      updateSays();
-      renderMessages();
+      refreshQuoteViews(!!$('[data-fv], [data-q]', box));
+    });
+    bar.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('[data-qn]')) e.target.blur();
     });
   }
 

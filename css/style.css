@@ -129,6 +129,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .qb-item b { font-size: 17px; color: var(--ink); }
 .qb-empty { color: var(--muted) !important; font-weight: 600; }
 .qb-free { min-width: 22px; text-align: center; }
+.qb-units {
+  width: 64px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 10px;
+  font-size: 17px; font-weight: 700; color: var(--ink); text-align: center; background: var(--paper);
+}
+.qb-units:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.qb-units::placeholder { font-size: 13px; font-weight: 600; color: var(--muted); }
+.qb-unit { font-size: 15px; font-weight: 700; color: var(--ink); margin-left: -4px; }
 .qb-step {
   width: 30px; height: 30px; border-radius: 50%;
   border: 1px solid var(--line); background: var(--paper); color: var(--ink);
