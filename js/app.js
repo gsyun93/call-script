@@ -907,6 +907,9 @@
       if (ins) {
         list += '<div class="choice has-input' + (ins.length > 1 ? ' multi' : '') + '" data-key="' + key + '" data-opt="' + i + '" data-oi="' + i + '">' +
           '<kbd>' + (key++) + '</kbd><b>' + esc(o.label) + (o.note ? '<small>' + esc(o.note) + '</small>' : '') + '</b>' +
+          (o.chips ? '<span class="opt-chips">' + o.chips.items.map(function (c) {
+            return '<button type="button" class="opt-chip' + (chipPicked(o).indexOf(c) !== -1 ? ' is-on' : '') + '" data-chip="' + esc(c) + '">' + esc(c) + '</button>';
+          }).join('') + '</span>' : '') +
           ins.map(function (it) {
             var num = it.type === 'number', v = state.vars[it.key] || '';
             if (it.kind === 'date') v = shortDate(v);
@@ -983,9 +986,20 @@
   function optInputs(o) { return o.inputs || (o.input ? [o.input] : null); }
 
   // 입력칸이 달린 선택지: 입력값과 상태를 저장하고 이동
+  // 업체 버튼에서 고른 것
+  function chipPicked(o) { return state.vars[o.chips.key + 'Pick'] || []; }
   function pickOption(cur, i) {
     var o = cur.options[i];
     var ins = optInputs(o) || [];
+    // 고른 업체와 기타 칸을 합쳐서 저장 (비우면 empty 문구)
+    if (o.chips) {
+      var all = chipPicked(o).concat(ins.map(function (it) { return String(state.vars[it.key] || '').trim(); }).filter(Boolean));
+      state.vars[o.chips.key] = all.length ? all.join(', ') : (o.empty || '');
+      Object.keys(o.set || {}).forEach(function (k) { state.vars[k] = o.set[k]; });
+      saveVars();
+      go(o.to);
+      return;
+    }
     if (o.required && ins.some(function (it) { return !String(state.vars[it.key] || '').trim(); })) {
       var inp = $('#script [data-opt="' + i + '"] input');
       if (inp) { inp.classList.add('is-bad'); inp.focus(); }
@@ -1236,6 +1250,16 @@
       var inputs = $$('input', row);
       row.addEventListener('click', function (e) {
         if (row.dataset.lp) { delete row.dataset.lp; return; }
+        var chip = e.target.closest('[data-chip]');
+        if (chip) {
+          // 여러 개 고를 수 있게 누를 때마다 켜고 끈다
+          var o = cur.options[i], list = chipPicked(o).slice(), at = list.indexOf(chip.dataset.chip);
+          if (at === -1) list.push(chip.dataset.chip); else list.splice(at, 1);
+          state.vars[o.chips.key + 'Pick'] = list;
+          saveVars();
+          chip.classList.toggle('is-on', at === -1);
+          return;
+        }
         if (e.target.closest('.go-btn')) pickOption(cur, i);
         else if (e.target.tagName !== 'INPUT') inputs[0].focus();
       });

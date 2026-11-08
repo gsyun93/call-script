@@ -263,7 +263,8 @@ window.TOOL_DATA = {
           refs: [{ label: 'KT 하이오더', obj: 'kt' }, { label: '티오더', obj: 'torder' }, { label: '토스', obj: 'toss' }],
           options: [
             { label: '저희만 알아봤대요', to: 'n6_only', set: { rival: '없음' } },
-            { label: '견적 비교 중인 업체', input: { key: 'rival', placeholder: '업체명' }, empty: '다른 곳 비교 중', to: 'h_info' }
+            // chips: 여러 개 골라 누르는 업체 버튼. 고른 것과 기타 칸을 합쳐 rival에 넣는다
+            { label: '견적 비교 중인 업체', chips: { key: 'rival', items: ['티오더', '하이오더'] }, input: { key: 'rivalEtc', placeholder: '기타 업체' }, empty: '다른 곳 비교 중', to: 'h_info' }
           ]
         },
         n6_only: {
