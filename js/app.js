@@ -39,6 +39,16 @@
   //   nodes: 원래 있던 노드에서 바뀐 부분(이름, 버튼 목록, 순서)
   //   added: 새로 만든 노드 전체
   var custom = store.get('custom', null) || { nodes: {}, added: {} };
+  // 꾹 눌러 바꿀 수 있는 노드 항목. 원래 값은 되돌리기용으로 따로 둔다
+  var NODE_FIELDS = ['label', 'nextLabel', 'options', 'choices', 'next'];
+  var ORIG = {};
+  D.steps.forEach(function (st) {
+    Object.keys(st.nodes).forEach(function (id) {
+      var n = st.nodes[id], o = {};
+      NODE_FIELDS.forEach(function (f) { if (n[f] !== undefined) o[f] = JSON.parse(JSON.stringify(n[f])); });
+      ORIG[st.id + '.' + id] = o;
+    });
+  });
   function applyCustom() {
     Object.keys(custom.added).forEach(function (k) {
       var a = k.split('.'), st = findStep(a[0]);
@@ -48,24 +58,26 @@
       var a = k.split('.'), st = findStep(a[0]);
       if (st && st.nodes[a[1]]) {
         var o = custom.nodes[k], n = st.nodes[a[1]];
-        ['label', 'nextLabel', 'options', 'choices'].forEach(function (f) { if (o[f] !== undefined) n[f] = o[f]; });
+        NODE_FIELDS.forEach(function (f) { if (o[f] !== undefined) n[f] = o[f]; });
         // 예전에 편집해 둔 목록에 지금은 없어진 화면이 들어 있으면 뺀다
         if (n.choices) n.choices = n.choices.filter(function (id) { return st.nodes[id]; });
       }
     });
   }
   function saveNode(st, id) {
-    var k = st.id + '.' + id, n = st.nodes[id];
+    var k = st.id + '.' + id, n = st.nodes[id], o = {};
+    NODE_FIELDS.forEach(function (f) { if (n[f] !== undefined) o[f] = n[f]; });
     if (custom.added[k]) custom.added[k] = n;
-    else custom.nodes[k] = { label: n.label, nextLabel: n.nextLabel, options: n.options, choices: n.choices };
+    else custom.nodes[k] = o;
     store.set('custom', custom);
   }
-  function addNode(st, node) {
-    var id = 'c' + Date.now().toString(36);
-    st.nodes[id] = node;
-    custom.added[st.id + '.' + id] = node;
+  // 꾹 눌러 바꾼 버튼 구성을 원래대로
+  function restoreNode(st, id) {
+    var k = st.id + '.' + id, o = ORIG[k], n = st.nodes[id];
+    if (!o || !n) return;
+    NODE_FIELDS.forEach(function (f) { if (o[f] === undefined) delete n[f]; else n[f] = JSON.parse(JSON.stringify(o[f])); });
+    delete custom.nodes[k];
     store.set('custom', custom);
-    return id;
   }
 
   function esc(s) {
@@ -475,7 +487,7 @@
   // 이동한 화면이 건너뛸 화면이거나 다 채워진 목록이면 바로 그 다음으로
   function afterMove() {
     var st = curStep(), pp = stepPath(st), n = st.nodes[pp[pp.length - 1]];
-    if (passThrough(n) && !state.editMode) { go(n.next, true); return; }
+    if (passThrough(n)) { go(n.next, true); return; }
     if (n && n.kind === 'pick' && n.autoNext && n.next && !missingSlots(st, n).length) { go(n.next, true); return; }
     showScene();
   }
@@ -612,9 +624,6 @@
     if (canBack()) html += '<button type="button" class="nav-btn back" id="backBtn">이전</button>';
     var p0 = state.step === D.steps[0].id && stepPath(curStep()).length === 1;
     if (!p0) html += '<button type="button" class="nav-btn home" id="homeBtn">처음으로</button>';
-    html += '<span class="nav-gap"></span>';
-    if (state.editMode) html += '<button type="button" class="nav-btn ghost" id="editReset">편집 전체 되돌리기</button>';
-    html += '<button type="button" class="nav-btn ghost' + (state.editMode ? ' is-on' : '') + '" id="editToggle">' + (state.editMode ? '저장' : '화면 편집') + '</button>';
     return html + '</div>';
   }
 
@@ -840,7 +849,6 @@
         sayHtml(say) + '</button>';
     }).join('');
     html += '</div>';
-    if (state.editMode) html += '<button type="button" class="add-btn" id="addItem">+ 항목 추가</button>';
     // 빈칸이 남았으면 다음 버튼은 잠가두고 남은 항목을 보여준다
     var missing = missingSlots(s, cur);
     if (cur.next && missing.length) {
@@ -908,8 +916,8 @@
         return;
       }
       if (d) { dirs.push({ dir: d, to: o.to, label: o.label, extra: ' data-oi="' + i + '"' + (o.set ? ' data-opt="' + i + '"' : '') }); return; }
-      // 읽기 전용 화면: 고객 답별 안내를 누르지 않는 카드로 (편집 중에는 버튼으로 보여서 고칠 수 있게)
-      if (cur.readOnly && !state.editMode) {
+      // 읽기 전용 화면: 고객 답별 안내를 누르지 않는 카드로
+      if (cur.readOnly) {
         var sy = sayOf(o.to);
         reads += '<div class="ref-card"' + (sy && sy.key ? ' data-edit="' + sy.key + '" title="꾹 누르면 수정"' : '') + '><b>' + esc(o.label) + '</b>' + sayHtml(sy) + '</div>';
         return;
@@ -930,7 +938,6 @@
     });
     if (reads) html += '<div class="refs top">' + reads + '</div>';
     html += '<div class="choices' + (key <= 4 ? ' few' : '') + '">' + list;
-    if (state.editMode) html += '<button type="button" class="add-btn" id="addOption">+ 버튼 추가</button>';
     html += '</div>';
     if (prev || next) html += '<div class="dir-row"><div class="dir-col">' + prev + '</div><div class="dir-col">' + next + '</div></div>';
     return html + navRow();
@@ -1037,7 +1044,6 @@
         }
         go(b.dataset.go);
       });
-      if (b.dataset.edit) bindLongPress(b, function () { b.dataset.lp = '1'; editLine(b.dataset.edit); });
     });
     bindCalc(box);
     $$('[data-fv]', box).forEach(function (inp) {
@@ -1089,18 +1095,11 @@
     if (bb) bb.addEventListener('click', back);
     var hb = $('#homeBtn', box);
     if (hb) hb.addEventListener('click', restart);
-    $('#editToggle', box).addEventListener('click', function () {
-      state.editMode = !state.editMode;
-      renderScript();
-      if (!state.editMode) toast('저장했습니다');
+    // 버튼, 질문 카드, 입력칸 달린 답은 꾹 누르면 이름·멘트 수정과 삭제
+    if (!objOf(curId)) bindItemEdit(box, s, cur, curId);
+    $$('[data-go][data-edit]:not([data-oi]):not([data-ci]):not([data-nx])', box).forEach(function (b) {
+      bindLongPress(b, function () { b.dataset.lp = '1'; editLine(b.dataset.edit); });
     });
-    var er = $('#editReset', box);
-    if (er) er.addEventListener('click', function () {
-      if (!confirm('화면 편집으로 추가하거나 바꾼 버튼을 모두 처음 상태로 되돌릴까요? (멘트 수정은 그대로 둡니다)')) return;
-      store.set('custom', { nodes: {}, added: {} });
-      location.reload();
-    });
-    if (state.editMode && !objOf(curId)) bindEditBars(box, s, cur, curId);
     var ta = $('[data-ans]', box);
     if (ta) ta.addEventListener('input', function () {
       state.answers[ta.dataset.ans] = ta.value;
@@ -1127,6 +1126,7 @@
       var i = Number(row.dataset.opt);
       var inputs = $$('input', row);
       row.addEventListener('click', function (e) {
+        if (row.dataset.lp) { delete row.dataset.lp; return; }
         if (e.target.closest('.go-btn')) pickOption(cur, i);
         else if (e.target.tagName !== 'INPUT') inputs[0].focus();
       });
@@ -1157,139 +1157,125 @@
     });
   }
 
-  // ---------- 화면 편집 ----------
-  // 각 버튼 아래에 위로/아래로/이름/삭제를 붙이고, 버튼 추가 창을 띄운다
-  function bindEditBars(box, s, cur, curId) {
-    box.classList.add('editing');
-    function bar(el, tools) {
-      var wrap = document.createElement('div');
-      wrap.className = 'edit-cell';
-      el.parentNode.insertBefore(wrap, el);
-      wrap.appendChild(el);
-      var b = document.createElement('div');
-      b.className = 'edit-bar';
-      b.innerHTML = tools.map(function (t) { return '<button type="button" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('');
-      wrap.appendChild(b);
-      return b;
-    }
-    function done() { saveNode(s, curId); renderScript(); }
-    function move(arr, i, d) {
+  // ---------- 꾹 눌러 수정 ----------
+  function bindItemEdit(box, s, cur, curId) {
+    function swap(arr, i, d) {
       var j = i + d;
-      if (j < 0 || j >= arr.length) return;
+      if (j < 0 || j >= arr.length) return false;
       var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-      done();
+      return true;
     }
-    var tools = [['up', '위로'], ['down', '아래로'], ['name', '이름'], ['del', '삭제']];
-    $$('[data-oi]', box).forEach(function (el) {
-      var i = Number(el.dataset.oi);
-      bar(el, tools).addEventListener('click', function (e) {
-        var t = e.target.dataset.t, o = cur.options[i];
-        if (!t) return;
-        if (t === 'up') move(cur.options, i, -1);
-        else if (t === 'down') move(cur.options, i, 1);
-        else if (t === 'del') { if (confirm('"' + o.label + '" 버튼을 지울까요?')) { cur.options.splice(i, 1); done(); } }
-        else if (t === 'name') openForm('버튼 이름', [{ key: 'label', label: '버튼 이름', value: o.label }], function (v) { o.label = v.label; done(); });
+    function sayKeyOf(el, target) {
+      if (el.dataset.edit) return el.dataset.edit;
+      var sy = target && sayOf(target);
+      return sy && sy.key ? sy.key : null;
+    }
+    function shownLabel(el) { var b = $('b', el); return b ? b.childNodes[0].textContent.trim() : ''; }
+    $$('[data-ci]', box).forEach(function (el) {
+      var i = Number(el.dataset.ci), id = cur.choices[i], n = s.nodes[id];
+      bindLongPress(el, function () {
+        el.dataset.lp = '1';
+        openItemEditor({
+          title: '질문 수정', label: n.label || '', sayKey: sayKeyOf(el),
+          onLabel: function (v) { n.label = v; saveNode(s, id); },
+          onDelete: function () { cur.choices.splice(i, 1); saveNode(s, curId); },
+          onMove: function (d) { if (swap(cur.choices, i, d)) saveNode(s, curId); },
+          onReset: function () { restoreNode(s, curId); restoreNode(s, id); }
+        });
       });
     });
-    $$('[data-ci]', box).forEach(function (el) {
-      var i = Number(el.dataset.ci);
-      bar(el, tools).addEventListener('click', function (e) {
-        var t = e.target.dataset.t, id = cur.choices[i], n = s.nodes[id];
-        if (!t) return;
-        if (t === 'up') move(cur.choices, i, -1);
-        else if (t === 'down') move(cur.choices, i, 1);
-        else if (t === 'del') { if (confirm('"' + (n.label || '') + '" 항목을 목록에서 뺄까요?')) { cur.choices.splice(i, 1); done(); } }
-        else if (t === 'name') openForm('항목 이름', [{ key: 'label', label: '항목 이름', value: n.label || '' }], function (v) { n.label = v.label; saveNode(s, id); renderScript(); });
+    $$('[data-oi]', box).forEach(function (el) {
+      var i = Number(el.dataset.oi), o = cur.options[i];
+      bindLongPress(el, function () {
+        el.dataset.lp = '1';
+        openItemEditor({
+          title: '버튼 수정', label: o.label, sayKey: sayKeyOf(el, o.to),
+          onLabel: function (v) { o.label = v; saveNode(s, curId); },
+          onDelete: function () { cur.options.splice(i, 1); saveNode(s, curId); },
+          onMove: function (d) { if (swap(cur.options, i, d)) saveNode(s, curId); },
+          onReset: function () { restoreNode(s, curId); }
+        });
       });
     });
     $$('[data-nx]', box).forEach(function (el) {
-      bar(el, [['name', '이름']]).addEventListener('click', function (e) {
-        if (e.target.dataset.t !== 'name') return;
-        openForm('버튼 이름', [{ key: 'label', label: '버튼 이름', value: nextLabel(cur.next, cur) }], function (v) { cur.nextLabel = v.label; done(); });
-      });
-    });
-    var ao = $('#addOption', box);
-    if (ao) ao.addEventListener('click', function () {
-      var dests = destOptions(s, curId, cur);
-      openForm('버튼 추가', [
-        { key: 'label', label: '버튼 이름 (고객 반응)', value: '' },
-        { key: 'text', label: '누르면 읽을 멘트 (비워두면 바로 이동)', type: 'textarea', value: '' },
-        { key: 'to', label: '그다음 갈 화면', type: 'select', options: dests, value: dests[0][0] }
-      ], function (v) {
-        if (!v.label) return;
-        var to = v.to;
-        if (v.text) to = addNode(s, { kind: 'say', text: v.text, next: v.to });
-        cur.options = cur.options || [];
-        cur.options.push({ label: v.label, to: to });
-        done();
-      });
-    });
-    var ai = $('#addItem', box);
-    if (ai) ai.addEventListener('click', function () {
-      openForm('항목 추가', [
-        { key: 'label', label: '항목 이름', value: '' },
-        { key: 'text', label: '읽을 멘트 (질문)', type: 'textarea', value: '' }
-      ], function (v) {
-        if (!v.label) return;
-        var id = addNode(s, { label: v.label, kind: 'ask', text: v.text || v.label, next: curId, options: [] });
-        cur.choices.push(id);
-        done();
+      bindLongPress(el, function () {
+        el.dataset.lp = '1';
+        openItemEditor({
+          title: '버튼 수정', label: shownLabel(el) || nextLabel(cur.next, cur), sayKey: sayKeyOf(el),
+          onLabel: function (v) { cur.nextLabel = v; saveNode(s, curId); },
+          onDelete: function () { cur.next = ''; saveNode(s, curId); },
+          onReset: function () { restoreNode(s, curId); }
+        });
       });
     });
   }
 
-  // 새 버튼이 갈 수 있는 화면: 이 화면, 원래 다음 멘트, 각 목록, 통화 끝
-  function destOptions(s, curId, cur) {
-    var list = [[curId, '이 화면으로 돌아오기']];
-    if (cur.next && !resolve(cur.next) || cur.next && resolve(cur.next).node.kind !== 'pick') list.push([cur.next, '원래 다음 멘트']);
-    D.steps.forEach(function (st) {
-      Object.keys(st.nodes).forEach(function (id) {
-        var n = st.nodes[id];
-        if (n.kind !== 'pick') return;
-        list.push([st.id === s.id ? id : 'step:' + st.id + '#' + id, st.title + ' · ' + (n.label || '처음 화면')]);
-      });
-    });
-    list.push(['end', '통화 끝 (결과 기록)']);
-    return list;
-  }
-
-  // 간단한 입력 창 (이름 바꾸기, 버튼 추가)
-  function openForm(title, fields, onSave) {
-    var m = $('#formModal');
+  // 꾹 누르면 뜨는 창: 버튼 이름, 읽을 멘트, 순서, 삭제, 원래대로
+  function openItemEditor(o) {
+    var m = $('#itemModal');
     if (!m) {
       m = document.createElement('div');
       m.className = 'modal';
-      m.id = 'formModal';
-      m.innerHTML = '<div class="modal-card" role="dialog"><h2></h2><div class="form-body"></div>' +
-        '<div class="modal-act"><button type="button" class="btn-ghost" data-f="cancel">취소</button><button type="button" class="btn" data-f="save">저장</button></div></div>';
+      m.id = 'itemModal';
+      m.innerHTML = '<div class="modal-card" role="dialog"><h2></h2>' +
+        '<label class="form-field"><span>버튼 이름</span><input type="text" data-k="label"></label>' +
+        '<label class="form-field say-field"><span>누르면 읽을 멘트</span><textarea rows="5" data-k="say"></textarea></label>' +
+        '<p class="modal-help say-field">{store} 매장명, {n} 대수, {open} 오픈일, {name} 내 이름은 그대로 두면 값이 들어갑니다.</p>' +
+        '<div class="modal-act item-act">' +
+        '<button type="button" class="btn-ghost danger" data-i="del">삭제</button>' +
+        '<button type="button" class="btn-ghost" data-i="up">위로</button>' +
+        '<button type="button" class="btn-ghost" data-i="down">아래로</button>' +
+        '<button type="button" class="btn-ghost" data-i="reset">원래대로</button>' +
+        '<span class="act-gap"></span>' +
+        '<button type="button" class="btn-ghost" data-i="cancel">취소</button>' +
+        '<button type="button" class="btn" data-i="save">저장</button></div></div>';
       document.body.appendChild(m);
       m.addEventListener('click', function (e) {
-        var f = e.target.dataset && e.target.dataset.f;
-        if (f === 'cancel' || e.target === m) m.classList.remove('is-on');
-        if (f === 'save') {
-          var vals = {};
-          $$('[data-fk]', m).forEach(function (el) { vals[el.dataset.fk] = el.value.trim(); });
-          m.classList.remove('is-on');
-          if (m._save) m._save(vals);
+        var a = e.target.dataset && e.target.dataset.i, c = m._o;
+        if (e.target === m || a === 'cancel') { m.classList.remove('is-on'); return; }
+        if (!a || !c) return;
+        if (a === 'save') {
+          var lab = $('[data-k="label"]', m).value.trim();
+          if (lab && lab !== c.label) c.onLabel(lab);
+          if (c.sayKey) {
+            var v = $('[data-k="say"]', m).value.trim(), orig = origByKey(c.sayKey);
+            if (!v || v === orig) delete state.edits[c.sayKey];
+            else state.edits[c.sayKey] = v;
+            saveEdits();
+          }
+          done('저장했습니다');
+        } else if (a === 'del') {
+          if (!confirm('"' + c.label + '" 을(를) 지울까요?')) return;
+          c.onDelete();
+          done('지웠습니다');
+        } else if (a === 'up' || a === 'down') {
+          c.onMove(a === 'up' ? -1 : 1);
+          done();
+        } else if (a === 'reset') {
+          c.onReset();
+          if (c.sayKey) { delete state.edits[c.sayKey]; saveEdits(); }
+          done('원래대로 돌렸습니다');
         }
       });
       m.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') { e.stopPropagation(); m.classList.remove('is-on'); }
-        if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); $('[data-f="save"]', m).click(); }
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $('[data-i="save"]', m).click(); }
       });
     }
-    $('h2', m).textContent = title;
-    $('.form-body', m).innerHTML = fields.map(function (f) {
-      var lab = '<span>' + esc(f.label) + '</span>';
-      if (f.type === 'textarea') return '<label class="form-field">' + lab + '<textarea rows="4" data-fk="' + f.key + '">' + esc(f.value) + '</textarea></label>';
-      if (f.type === 'select') return '<label class="form-field">' + lab + '<select data-fk="' + f.key + '">' + f.options.map(function (o) {
-        return '<option value="' + esc(o[0]) + '"' + (o[0] === f.value ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
-      }).join('') + '</select></label>';
-      return '<label class="form-field">' + lab + '<input type="text" data-fk="' + f.key + '" value="' + esc(f.value) + '"></label>';
-    }).join('');
-    m._save = onSave;
+    function done(msg) {
+      m.classList.remove('is-on');
+      renderScript();
+      renderObjections();
+      if (msg) toast(msg);
+    }
+    m._o = o;
+    $('h2', m).textContent = o.title;
+    $('[data-k="label"]', m).value = o.label;
+    $$('.say-field', m).forEach(function (el) { el.hidden = !o.sayKey; });
+    $('[data-k="say"]', m).value = o.sayKey ? textByKey(o.sayKey) || '' : '';
+    $('[data-i="up"]', m).hidden = $('[data-i="down"]', m).hidden = !o.onMove;
     m.classList.add('is-on');
-    setTimeout(function () { var first = $('[data-fk]', m); if (first) first.focus(); }, 30);
+    setTimeout(function () { $('[data-k="label"]', m).focus(); }, 30);
   }
 
   // 버튼 누를 때 짧은 딸깍 소리

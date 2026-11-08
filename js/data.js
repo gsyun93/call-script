@@ -78,7 +78,7 @@ window.TOOL_DATA = {
           options: [
             { label: '운영 중', set: { status: '운영 중' }, to: 'step:talk#m1' },
             { label: '오픈 준비 중', set: { status: '오픈 준비 중' }, to: 'step:talk#m1_new' },
-            { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk' }
+            { label: '기타', input: { key: 'statusNote', placeholder: '직접 입력' }, set: { status: '기타' }, to: 'step:talk#m1' }
           ]
         }
       }
@@ -91,29 +91,21 @@ window.TOOL_DATA = {
         h0: {
           label: '상담 메뉴',
           kind: 'pick',
-          choices: ['h_needs', 'h_info']
+          choices: ['h_info']
         },
 
-        // 니즈 파악
-        h_needs: {
-          label: '니즈 파악',
-          kind: 'pick',
-          choices: ['m1', 'm1_new'],
-          next: 'h_info',
-          nextLabel: '견적 정보 확인으로'
-        },
+        // 도입 계기 (고객 답 버튼에 강점 멘트가 들어 있다)
         m1: {
           label: '도입 계기',
           kind: 'ask',
           when: 'running',
           text: '테이블 오더는 어떻게 고민하게 되셨어요? 기존에 어떤 불편함이 있으셨나해서 여쭤드려요',
-          next: 'h_needs',
+          next: 'h_info',
           options: [
             { label: '인건비·사람 구하기', to: 'd_staff' },
             { label: '바쁠 때 회전·주문 밀림', to: 'd_prepay' },
             { label: '메뉴가 자주 바뀜', to: 'd_menu' },
-            { label: '외국인 손님', to: 'd_lang' },
-            { label: '견적 정보 확인으로', to: 'h_info' }
+            { label: '외국인 손님', to: 'd_lang' }
           ]
         },
         m1_new: {
@@ -121,13 +113,12 @@ window.TOOL_DATA = {
           kind: 'ask',
           when: 'new',
           text: '어떤 점 때문에 테이블오더 도입을 고민하시게 되셨어요?',
-          next: 'h_needs',
+          next: 'h_info',
           options: [
             { label: '인건비·사람 구하기', to: 'd_staff' },
             { label: '바쁠 때 회전·주문 밀림', to: 'd_prepay' },
             { label: '메뉴가 자주 바뀜', to: 'd_menu' },
-            { label: '외국인 손님', to: 'd_lang' },
-            { label: '견적 정보 확인으로', to: 'h_info' }
+            { label: '외국인 손님', to: 'd_lang' }
           ]
         },
 
@@ -152,19 +143,13 @@ window.TOOL_DATA = {
           next: 'h_info',
           options: [
             { label: '없어요 / 새로 해요', to: 'n5_none', set: { net: '없음, 같이 진행', qBundle: true, qNoNet: false } },
-            { label: '약정 중인데 옮길 수 있어요', to: 'n5_have', set: { net: '있음, 옮길 수 있음', qBundle: true, qNoNet: false } },
             // 바꿀 생각 없으면 견적 계산기에서 인터넷 결합 버튼을 숨긴다
             { label: '있고 바꿀 생각 없어요', to: 'h_info', set: { net: '있음, 변경 안 함', qBundle: false, qNoNet: true } }
           ]
         },
-        n5_have: {
-          kind: 'say',
-          text: '인터넷 요금은 어디든 똑같은데, 저희로 옮기시면 포스 세트가 무상이에요. 약정은 언제 끝나세요?',
-          next: 'h_info'
-        },
         n5_none: {
           kind: 'say',
-          text: '그럼 저희랑 같이 하세요. 요금은 같은데 포스 세트가 무상이에요.',
+          text: '그러면 저희 인터넷도 같이하시면 드릴 수 있는 혜택이 더 커지다보니 지금 통화 끝나면 인터넷 상담도 받으실 수 있도록 연결 도와드리겠습니다.',
           next: 'h_info'
         },
         n3: {
@@ -187,7 +172,7 @@ window.TOOL_DATA = {
               { key: 'nBatt', label: '보조배터리형', note: '콘센트 없음' }
             ] },
             { label: '거치대', set: 'stand', match: 'n',
-              say: '목이 길어서 테이블을 넓게 쓰는 고정형, 달력처럼 올려두는 탁상형이 있어요. 어떤 걸로 하시겠어요?',
+              say: '테이블 옆으로 고정되서 목이 길게 올라오는 고정형 거치대랑 테이블달력처럼 올려두는 탁상형이 있는데 어떤 걸로 하시겠어요?',
               items: [
               { key: 'sFix', label: '고정형', note: '테이블에 고정' },
               { key: 'sDesk', label: '탁상·액자형', note: '테이블 위에 세워둠' },
@@ -217,12 +202,12 @@ window.TOOL_DATA = {
         },
         n2_post: {
           kind: 'say',
-          text: '그럼 후불형이요. 드시면서 주문하고 나가실 때 한 번에 계산해요.',
+          text: '자리에서는 주문만 가능하고 결제는 카운터에서 한번에 받는 후불형 모델',
           next: 'h_info'
         },
         n2_pre: {
           kind: 'say',
-          text: '그럼 선불형이요. 자리에서 결제까지 끝나서 계산 줄이 없어져요.',
+          text: '자리에서 주문과 결제까지 가능한 선불형 모델',
           next: 'h_info'
         },
         n4: {
@@ -241,7 +226,7 @@ window.TOOL_DATA = {
         },
         n4_free: {
           kind: 'say',
-          text: '그럼 포스까지 저희 걸로 바꾸시죠. 메뉴도 한 번에, 문제 생겨도 전화 한 통이면 끝나요.',
+          text: '그러면 포스까지 같이해서 견적 만들어 드릴게요',
           next: 'h_info'
         },
         n4_new: {
@@ -351,7 +336,7 @@ window.TOOL_DATA = {
         },
         q2: {
           kind: 'say',
-          text: '{freeLine}{posLine}정리하면 테이블오더 {n}대{setLine} 월 {total}원이에요. {benefits}결정은 대표님이 하세요, 같이 상의하시는 분 계세요?',
+          text: '{freeLine}{posLine}정리하면 테이블오더 {n}대{setLine} 월 {total}원이에요. {benefits}저희가 감사하게도 신규문의랑 티오더나 하이오더 쓰시다가 변경하시는 문의가 굉장히 많은데, 설치일정이 접수순으로 잡히다보니 설치 일정 선점을 위해서 가계약 먼저 하시는걸 추천드려요, 가계약같은 경우 주민번호 뒷자리 가리시고 신분증 사진만 보내주시면 되시구요. 계약금이나 위약금 별도로 없고 확정하시기 전까지는 저희가 프로모션 나오면 우선 적용 도와드리고 수량도 변경 가능하십니다.',
           pass: true,
           next: 'q_decider'
         },
@@ -365,8 +350,8 @@ window.TOOL_DATA = {
           // 이 화면에서 재통화 날짜까지 넣고, 답을 누르면 바로 결과 기록
           fields: [{ key: 'date', label: '재통화 예정일', type: 'date' }, { key: 'time', label: '시간', type: 'time' }],
           options: [
-            { label: '본인이 결정한대요', to: 'step:close', then: 'end', set: { decider: '본인' } },
-            { label: '배우자·본사랑 상의한대요', to: 'step:close#cr_decider', then: 'end', set: { decider: '배우자·본사' } }
+            { label: '가계약 하겠대요', to: 'step:close', then: 'end', set: { decider: '본인' } },
+            { label: '상의해봐야 한대요', to: 'step:close#cr_decider', then: 'end', set: { decider: '배우자·본사' } }
           ]
         }
       }
@@ -391,7 +376,7 @@ window.TOOL_DATA = {
         },
         c1: {
           kind: 'say',
-          text: '사업자등록증 없어도 성함, 생년월일로 가계약하면 설치 날짜를 먼저 잡아요. 계약금, 위약금 없어요.',
+          text: '주민번호 뒷자리 가리시고 신분증 사진만 카톡으로 보내주세요. 가계약서 바로 보내드릴게요.',
           next: 'c2',
           nextLabel: '가계약 하겠대요',
           options: [
@@ -465,7 +450,7 @@ window.TOOL_DATA = {
         },
         r_new: {
           kind: 'say',
-          text: '좋습니다. 성함, 생년월일로 가계약하면 설치 날짜를 먼저 잡아요. 계약금, 위약금 없어요.',
+          text: '좋습니다. 주민번호 뒷자리 가리시고 신분증 사진만 보내주시면 가계약으로 설치 날짜 먼저 잡아드릴게요.',
           slots: [{ key: 'open', label: '오픈일' }],
           fields: [{ key: 'open', label: '오픈일', type: 'date' }],
           next: 'r_docs',
@@ -838,7 +823,7 @@ window.TOOL_DATA = {
         ['계약 서류', '사업자등록증, 대표자 신분증 사본, 세금계산서 이메일', '이후 렌탈사 신용조회'],
         ['카드 가맹 서류', '사업자 통장 사본, 영업신고증, 간판 사진', '접수 후 2~3영업일, 보완 시 최대 약 7일'],
         ['매장 사진 4종', '간판+매장 / 실내 전체 / 주방 전체 / 출입문 열고 문+내부', '설치팀 사전 준비용'],
-        ['가계약', '성함 + 생년월일', '계약금·위약금 없음, 설치일 선점'],
+        ['가계약', '신분증 사진 (주민번호 뒷자리 가림)', '계약금·위약금 없음, 설치일 선점'],
         ['수량 변경', '출고 2~3일 전까지', ''],
         ['설치 시점', '인터넷 개통 후 2~3일 뒤', '설치와 교육은 하루'],
         ['렌탈사', 'BS ON, 부결 시 LG헬로비전', 'LG헬로비전은 테이블오더만 가능']
@@ -861,7 +846,7 @@ window.TOOL_DATA = {
     },
     {
       title: '가계약 안내',
-      text: '대표님, 설치 일정 먼저 잡아드리기 위해 가계약으로 진행하겠습니다.\n\n- 필요한 것: 성함, 생년월일\n- 계약금, 위약금 없음\n- 사업자등록증 나오면 본계약으로 전환\n- 출고 2~3일 전까지 수량 변경 가능\n\n잠시 후 전자 가계약서가 카카오톡으로 갑니다.'
+      text: '대표님, 설치 일정 먼저 잡아드리기 위해 가계약으로 진행하겠습니다.\n\n- 필요한 것: 신분증 사진 (주민번호 뒷자리 가리기)\n- 계약금, 위약금 없음\n- 사업자등록증 나오면 본계약으로 전환\n- 출고 2~3일 전까지 수량 변경 가능\n\n잠시 후 전자 가계약서가 카카오톡으로 갑니다.'
     },
     {
       title: '매장 사진 요청',

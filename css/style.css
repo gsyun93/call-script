@@ -510,14 +510,14 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 .nav-btn.ghost { background: transparent; color: var(--muted); font-size: 15px; padding: 12px 18px; }
 .nav-btn.ghost:hover { background: var(--chip); color: var(--ink); }
 .nav-btn.ghost.is-on { background: var(--ink); color: #fff; }
-.script.editing .tiles, .script.editing .choices, .script.editing .dir-row { outline: 2px dashed #cfe3ff; outline-offset: 8px; border-radius: 16px; }
-.edit-cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.edit-bar { display: flex; gap: 6px; flex-wrap: wrap; padding-left: 8px; }
-.edit-bar button { border: 0; background: var(--chip); color: var(--ink-2); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.edit-bar button:hover { background: var(--chip-2); color: var(--ink); }
-.edit-bar button[data-t="del"] { color: var(--s-lo); }
-.add-btn { width: 100%; margin-top: 14px; border: 2px dashed #b9d8ff; background: #f6faff; color: var(--accent); border-radius: 18px; padding: 18px; font-size: 18px; font-weight: 700; cursor: pointer; }
-.add-btn:hover { background: var(--accent-soft); }
+/* 꾹 눌러 수정 창 */
+#itemModal .form-field { margin-bottom: 14px; }
+#itemModal .modal-help { margin-top: -6px; }
+.item-act { flex-wrap: wrap; }
+.item-act .act-gap { flex: 1; }
+.item-act .danger { color: var(--s-lo); }
+.item-act .danger:hover { border-color: var(--s-lo); }
+[hidden] { display: none !important; }
 .form-body { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
 .form-field { display: flex; flex-direction: column; gap: 6px; }
 .form-field span { font-size: 14px; font-weight: 600; color: var(--ink-2); }
