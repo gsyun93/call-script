@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>세일즈 마스터</title>
-<link rel="stylesheet" href="css/style.css?v=91">
+<link rel="stylesheet" href="css/style.css?v=92">
 </head>
 <body>
 
@@ -42,6 +42,11 @@
         <article class="script" id="script"></article>
       </div>
       <aside class="obj">
+        <div class="side-tabs" id="sideTabs" hidden>
+          <button type="button" data-side="stage" data-tip="지금 화면이 어떤 단계인지, 무엇을 해야 하는지, 파이프드라이브에 무엇을 남기는지 보여줍니다.">단계 안내</button>
+          <button type="button" data-side="obj" data-tip="고객이 한 말로 검색해서 답변을 찾습니다.">반론 대응</button>
+        </div>
+        <div class="stage-box" id="stageBox" hidden></div>
         <div class="obj-head">
           <h2>반론 대응</h2>
           <input id="objSearch" type="search" placeholder="고객이 한 말로 검색 (예: 비싸, 위약금)">
@@ -179,8 +184,8 @@
   </div>
 </div>
 
-<script src="js/data.js?v=91"></script>
+<script src="js/data.js?v=92"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/cloud.js?v=91"></script>
+<script src="js/cloud.js?v=92"></script>
 </body>
 </html>

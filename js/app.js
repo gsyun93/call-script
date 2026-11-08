@@ -38,6 +38,9 @@
     base.guide = e.guide;
     base.tabTips = e.tabTips || {};
     base.entPd = e.pd || {};
+    base.stageCards = e.stageCards || {};
+    base.nodeStage = e.nodeStage || {};
+    base.pipelines = e.pipelines || {};
     return base;
   }
 
@@ -1236,6 +1239,7 @@
       c.addEventListener('change', function () { state.vars[c.dataset.chk] = c.checked; saveVars(); });
     });
     if (D.ent) markTips(box, s, cur);
+    if (D.ent) renderStagePanel(s, curId);
     $$('[data-fv]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         state.vars[inp.dataset.fv] = inp.value;
@@ -1355,6 +1359,43 @@
     $$('.fg-say[data-edit], .ref-card[data-edit]', box).forEach(function (el) {
       bindLongPress(el, function () { editLine(el.dataset.edit); });
     });
+  }
+
+  // ---------- Enterprise: 오른쪽 단계 안내 ----------
+  function setSide(which) {
+    store.set('sideTab', which);
+    $$('#sideTabs [data-side]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.side === which); });
+    $('#stageBox').hidden = which !== 'stage';
+    $('.obj-head').hidden = which === 'stage';
+    $('#objList').hidden = which === 'stage';
+  }
+  function bindSide() {
+    if (!D.ent) return;
+    $('#sideTabs').hidden = false;
+    $$('#sideTabs [data-side]').forEach(function (b) { b.addEventListener('click', function () { setSide(b.dataset.side); }); });
+    setSide(store.get('sideTab', 'stage'));
+  }
+  // 지금 화면의 단계 카드: 목표, 하는 법, 남길 것, 다음 단계 + 파이프라인에서 어디쯤인지
+  function renderStagePanel(s, curId) {
+    var box = $('#stageBox');
+    if (!box) return;
+    var cid = D.nodeStage[curId] || (s.id === 'ent' ? 'start' : s.id === 'hq' ? 'key' : 'fr');
+    if (curId && curId.indexOf('obj:') === 0) cid = D.nodeStage[stepPath(s).filter(function (x) { return x.indexOf('obj:') !== 0; }).pop()] || cid;
+    var c = D.stageCards[cid];
+    if (!c) { box.innerHTML = ''; return; }
+    var steps = c.pipe ? (D.pipelines[c.pipe] || []) : [];
+    var at = steps.indexOf(c.at);
+    var html = '<div class="sc"><p class="sc-kicker">지금 단계</p><h3>' + esc(c.title) + '</h3>';
+    if (steps.length) {
+      html += '<p class="sc-pipe">파이프드라이브 [Enterprise] ' + esc(c.pipe) + '</p><ol class="sc-flow">' + steps.map(function (st, i) {
+        return '<li class="' + (i < at ? 'done' : i === at ? 'now' : '') + '">' + esc(st) + '</li>';
+      }).join('') + '</ol>';
+    }
+    html += '<div class="sc-goal"><b>목표</b><span>' + esc(c.goal) + '</span></div>';
+    if (c.how && c.how.length) html += '<div class="sc-sec"><h4>이렇게 하세요</h4><ol>' + c.how.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol></div>';
+    if (c.record && c.record.length) html += '<div class="sc-sec"><h4>파이프드라이브에 남길 것</h4><ul>' + c.record.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    if (c.next) html += '<div class="sc-next"><b>다음 단계로 가려면</b><span>' + esc(c.next) + '</span></div>';
+    box.innerHTML = html + '</div>';
   }
 
   // ---------- Enterprise: 띠, 도움말, 미팅·가이드·가격 ----------
@@ -1808,6 +1849,7 @@
   }
 
   function openObjection(id) {
+    if (D.ent) setSide('obj');
     var q = $('#objSearch');
     if (q.value) { q.value = ''; }
     openObj = {};
@@ -2637,6 +2679,7 @@
   renderMessages();
   bindDrawer();
   bindLog();
+  bindSide();
   bindKeys();
   updateCount();
 })();
