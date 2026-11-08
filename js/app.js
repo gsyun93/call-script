@@ -1882,6 +1882,57 @@
     var d = v.status === '오픈 준비 중' ? v.open : v.install;
     return isIso(d) ? d : '';
   }
+  // 경쟁사, 사용 포스에 실제 값을 넣을 때 빼는 자리 채움 값
+  var PD_PLACEHOLDER = ['수취불가', '물어볼 수 없음', '해당없음', '해당 없음', '미정'];
+  function sameVal(a, b) {
+    if (Array.isArray(a) || Array.isArray(b)) {
+      var x = (a || []).slice().sort().join('|'), y = (b || []).slice().sort().join('|');
+      return x === y;
+    }
+    return String(a || '') === String(b || '');
+  }
+  // 항목마다 파이프드라이브 양식 그대로: 선택 하나는 드롭다운, 여러 개는 체크 목록, 글자·날짜는 칸
+  function pdControl(fd, val) {
+    var name = esc(fd.name);
+    if (fd.type === 'enum') {
+      return '<select data-pv="' + name + '"><option value="">선택 안 함</option>' +
+        fd.options.map(function (o) { return '<option' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+    }
+    if (fd.type === 'set') {
+      var picked = val || [];
+      return '<div class="ms" data-pv="' + name + '">' +
+        '<button type="button" class="ms-box">' + msTags(picked) + '</button>' +
+        '<div class="ms-pop" hidden><input type="text" class="ms-q" placeholder="검색">' +
+        '<div class="ms-list">' + fd.options.map(function (o) {
+          return '<label class="ms-opt"><input type="checkbox" value="' + esc(o) + '"' + (picked.indexOf(o) !== -1 ? ' checked' : '') + '>' + esc(o) + '</label>';
+        }).join('') + '</div></div></div>';
+    }
+    if (fd.type === 'date') return '<input type="date" data-pv="' + name + '" value="' + esc(isIso(val) ? val : '') + '">';
+    return '<input type="text" data-pv="' + name + '" value="' + esc(val || '') + '">';
+  }
+  function msTags(list) {
+    return list.length ? list.map(function (x) { return '<span class="ms-tag">' + esc(x) + '</span>'; }).join('') : '<span class="ms-none">선택 안 함</span>';
+  }
+  function pdValueOf(name) {
+    var el = $('#pdPanel [data-pv="' + name.replace(/"/g, '\\"') + '"]');
+    if (!el) return '';
+    if (el.classList.contains('ms')) return $$('.ms-list input:checked', el).map(function (c) { return c.value; });
+    return el.value;
+  }
+  // 줄 아래 안내: 지금 값과, 체크하면 어떻게 되는지
+  function pdRowNote(row) {
+    var fd = row._fd, cb = $('[data-pf]', row), val = row._close ? $('[data-pv="__close"]', row).value : pdValueOf(fd.name);
+    var cur = row._close ? (pd.data.deal.expected_close_date || '') : fd.current;
+    var curText = Array.isArray(cur) ? cur.join(', ') : cur;
+    var valText = Array.isArray(val) ? val.join(', ') : val;
+    var t;
+    if (!cb.checked) t = curText ? '지금: ' + curText : '비어 있음';
+    else if (sameVal(val, cur)) t = '지금과 같음';
+    else if (curText) t = '바꿈: ' + curText + ' → ' + (valText || '비움');
+    else t = '채움';
+    $('small', row).textContent = t;
+    row.classList.toggle('is-over', cb.checked && !!curText && !sameVal(val, cur));
+  }
   function renderPdPanel() {
     var d = pd.data, f = $('#recordForm');
     var props = pdProposals(d.fields);
@@ -1896,72 +1947,121 @@
       '<div class="pd-next"><span id="pdNextDate">' + esc(f.recallDate.value ? fmtKoDate(f.recallDate.value) : '재컨택일 없음 (만들지 않음)') + '</span>' +
       '<input id="pdTime" type="time" value="' + esc(/^\d{1,2}:\d{2}$/.test(state.vars.time || '') ? state.vars.time : '') + '">' +
       '<input id="pdNextNote" type="text" placeholder="할 일 (예: 견적서 보고 다시 통화)"></div></div>';
-    html += '<div class="pd-sec"><h4>딜 항목 <small>비어 있는 항목만 채움</small></h4><div class="pd-fields">';
-    d.fields.forEach(function (fd) {
-      var cur = Array.isArray(fd.current) ? fd.current.join(', ') : fd.current;
-      var isSet = fd.type === 'set';
-      var locked = !isSet && cur;
-      var val = fd.name === '★리드 감도' ? sens : props[fd.name];
-      var ctl;
-      if (fd.name === '업종' || fd.name === '사용 포스') {
-        ctl = '<select data-pv="' + esc(fd.name) + '"' + (locked ? ' disabled' : '') + '><option value="">선택 안 함</option>' +
-          fd.options.map(function (o) { return '<option' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
-      } else {
-        var shown = Array.isArray(val) ? val.join(', ') : (val || '');
-        ctl = '<span class="pd-val" data-pv="' + esc(fd.name) + '">' + esc(shown || '-') + '</span>';
-      }
-      var has = Array.isArray(val) ? val.length : !!val;
-      html += '<label class="pd-f' + (locked ? ' is-locked' : '') + '"><input type="checkbox" data-pf="' + esc(fd.name) + '"' + (has && !locked ? ' checked' : '') + (locked ? ' disabled' : '') + '>' +
-        '<b>' + esc(fd.name) + '</b>' + ctl +
-        '<small>' + (locked ? '기존 값 유지: ' + esc(cur) : isSet && cur ? '지금: ' + esc(cur) + ' (더함)' : '비어 있음') + '</small></label>';
-    });
-    var cd = pdCloseDate();
-    html += '<label class="pd-f"><input type="checkbox" data-pf="__close"' + (cd ? ' checked' : ' disabled') + '><b>예상 완료 날짜</b>' +
-      '<span class="pd-val">' + esc(cd || '-') + '</span><small>지금: ' + esc(d.deal.expected_close_date || '비어 있음') + (cd ? ' (오픈·도입 예정일로 바꿈)' : '') + '</small></label>';
+    html += '<div class="pd-sec"><h4>딜 항목 <small>체크한 항목만 보냄</small></h4><div class="pd-fields" id="pdFields"></div>';
     if (d.missing && d.missing.length) html += '<p class="pd-sub">파이프드라이브에서 못 찾은 항목: ' + esc(d.missing.join(', ')) + '</p>';
-    html += '</div></div>';
+    html += '</div>';
     $('#pdPanel').innerHTML = html;
+    var box = $('#pdFields');
+    d.fields.forEach(function (fd) {
+      var cur = fd.current;
+      var prop = fd.name === '★리드 감도' ? sens : props[fd.name];
+      var val;
+      if (fd.type === 'set') {
+        // 통화에서 받은 값이 있으면 자리 채움 값은 빼고 더한다
+        var add = (Array.isArray(prop) ? prop : prop ? [prop] : []).filter(function (x) { return fd.options.indexOf(x) !== -1; });
+        val = add.length ? (cur || []).filter(function (x) { return PD_PLACEHOLDER.indexOf(x) === -1; }) : (cur || []).slice();
+        add.forEach(function (x) { if (val.indexOf(x) === -1) val.push(x); });
+      } else {
+        val = prop || cur || '';
+      }
+      // 처음 체크: 비어 있던 걸 채우거나, 감도처럼 매번 바뀌는 값이거나, 여러 개 항목에 더할 게 있을 때
+      var curEmpty = Array.isArray(cur) ? !cur.length : !cur;
+      var check = !sameVal(val, cur) && (fd.type === 'set' || curEmpty || fd.name === '★리드 감도') && !(Array.isArray(val) ? !val.length : !val);
+      var row = document.createElement('div');
+      row.className = 'pd-f';
+      row.innerHTML = '<input type="checkbox" data-pf="' + esc(fd.name) + '"' + (check ? ' checked' : '') + '><b>' + esc(fd.name) + '</b>' + pdControl(fd, val) + '<small></small>';
+      row._fd = fd;
+      box.appendChild(row);
+      pdRowNote(row);
+    });
+    // 예상 완료 날짜 (오픈·도입 예정일)
+    var cd = pdCloseDate(), crow = document.createElement('div');
+    crow.className = 'pd-f';
+    crow._close = true;
+    crow.innerHTML = '<input type="checkbox" data-pf="__close"' + (cd && cd !== d.deal.expected_close_date ? ' checked' : '') + '><b>예상 완료 날짜</b>' +
+      '<input type="date" data-pv="__close" value="' + esc(cd || d.deal.expected_close_date || '') + '"><small></small>';
+    box.appendChild(crow);
+    pdRowNote(crow);
+
     $('#pdPanel').hidden = false;
     $('#pdSend').hidden = false;
     $('#pdNote').addEventListener('input', function () { pd.noteTouched = true; });
-    // 업종·사용 포스를 고르면 체크도 같이
-    $$('#pdPanel select[data-pv]').forEach(function (s) {
-      s.addEventListener('change', function () {
-        var cb = $('#pdPanel [data-pf="' + s.dataset.pv + '"]');
-        if (cb && !cb.disabled) cb.checked = !!s.value;
+    // 값을 바꾸면 그 줄을 체크하고 안내를 다시
+    $$('.pd-f', box).forEach(function (row) {
+      var cb = $('[data-pf]', row);
+      function changed() {
+        var v = row._close ? $('[data-pv="__close"]', row).value : pdValueOf(row._fd.name);
+        var cur = row._close ? d.deal.expected_close_date : row._fd.current;
+        cb.checked = !sameVal(v, cur) && !(Array.isArray(v) ? false : !v) || (Array.isArray(v) && !sameVal(v, cur));
+        pdRowNote(row);
+      }
+      cb.addEventListener('change', function () { pdRowNote(row); });
+      $$('select, input[type="text"], input[type="date"]', row).forEach(function (el) {
+        if (el.classList.contains('ms-q')) return;
+        el.addEventListener('input', changed);
+        el.addEventListener('change', changed);
       });
+      var ms = $('.ms', row);
+      if (ms) {
+        var pop = $('.ms-pop', ms), q = $('.ms-q', ms);
+        $('.ms-box', ms).addEventListener('click', function () {
+          var open = pop.hidden;
+          $$('#pdPanel .ms-pop').forEach(function (p) { p.hidden = true; });
+          pop.hidden = !open;
+          if (open) { q.value = ''; $$('.ms-opt', ms).forEach(function (o) { o.hidden = false; }); q.focus(); }
+        });
+        q.addEventListener('input', function () {
+          var w = q.value.trim();
+          $$('.ms-opt', ms).forEach(function (o) { o.hidden = w && o.textContent.indexOf(w) === -1; });
+        });
+        $$('.ms-list input', ms).forEach(function (c) {
+          c.addEventListener('change', function () {
+            $('.ms-box', ms).innerHTML = msTags(pdValueOf(row._fd.name));
+            changed();
+          });
+        });
+      }
     });
   }
+  // 다른 곳을 누르면 여러 개 선택 목록을 닫는다
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || e.target.closest('.ms')) return;
+    $$('#pdPanel .ms-pop').forEach(function (p) { p.hidden = true; });
+  });
   // 감도, 메모, 재컨택일을 바꾸면 미리보기도 맞춘다
-  function pdSync() {
-    if (!pd.data) return;
+  function pdSync(e) {
+    if (!pd.data || (e && e.target && e.target.closest && e.target.closest('#pdPanel'))) return;
     var f = $('#recordForm');
     if (!pd.noteTouched) $('#pdNote').value = pdNote();
     var sens = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
-    var sv = $('#pdPanel .pd-val[data-pv="★리드 감도"]');
-    if (sv) sv.textContent = sens || '-';
-    var cb = $('#pdPanel [data-pf="★리드 감도"]');
-    if (cb && !cb.disabled) cb.checked = !!sens;
+    var sel = $('#pdPanel select[data-pv="★리드 감도"]');
+    if (sel && sens && sel.value !== sens) {
+      sel.value = sens;
+      var row = sel.closest('.pd-f'), cb = $('[data-pf]', row);
+      cb.checked = !sameVal(sens, row._fd.current);
+      pdRowNote(row);
+    }
     $('#pdNextDate').textContent = f.recallDate.value ? fmtKoDate(f.recallDate.value) : '재컨택일 없음 (만들지 않음)';
   }
   function pdPayload() {
     var f = $('#recordForm'), d = pd.data;
-    var props = pdProposals(d.fields);
-    props['★리드 감도'] = (f.querySelector('input[name="sens"]:checked') || {}).value || '';
-    var fields = {}, closeDate = '';
-    $$('#pdPanel [data-pf]').forEach(function (cb) {
-      if (!cb.checked || cb.disabled) return;
-      var name = cb.dataset.pf;
-      if (name === '__close') { closeDate = pdCloseDate(); return; }
-      var sel = $('#pdPanel select[data-pv="' + name + '"]');
-      var val = sel ? sel.value : props[name];
-      if (!val || (Array.isArray(val) && !val.length)) return;
-      fields[name] = d.fields.filter(function (x) { return x.name === name; })[0].type === 'set' && !Array.isArray(val) ? [val] : val;
+    var fields = {}, overwrite = [], closeDate = '';
+    $$('#pdFields .pd-f').forEach(function (row) {
+      var cb = $('[data-pf]', row);
+      if (!cb.checked) return;
+      if (row._close) { closeDate = $('[data-pv="__close"]', row).value; return; }
+      var fd = row._fd, v = pdValueOf(fd.name);
+      if (sameVal(v, fd.current)) return;
+      if (fd.type !== 'set' && !v) return;
+      fields[fd.name] = v;
+      if (fd.type !== 'set' && fd.current) overwrite.push(fd.name);
     });
     var pend = d.pending[0];
     return {
       dealId: String(d.deal.id),
       fields: fields,
+      overwrite: overwrite,
+      setMode: 'replace',
       closeDate: closeDate,
       today: { note: $('#pdNote').value.trim(), completeId: pend ? pend.id : null },
       next: { date: f.recallDate.value || '', time: $('#pdTime').value || '', note: $('#pdNextNote').value.trim() }

@@ -440,10 +440,19 @@ legend { font-size: 13px; color: var(--ink-2); padding: 0; margin-bottom: 6px; }
 .pd-next { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
 .pd-next input[type="text"] { flex: 1; min-width: 160px; }
 .pd-fields { display: flex; flex-direction: column; gap: 4px; }
-.drawer-body label.pd-f { display: grid; grid-template-columns: 20px 120px 1fr; align-items: center; gap: 4px 8px; flex-direction: row; font-size: 14px; color: var(--ink); padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.pd-f { display: grid; grid-template-columns: 20px 120px 1fr; align-items: center; gap: 4px 8px; font-size: 14px; color: var(--ink); padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
 .pd-f small { grid-column: 3; font-size: 12px; color: var(--muted); }
-.pd-f.is-locked { opacity: .55; }
-.pd-f select { font-size: 14px; padding: 4px 8px; }
+.pd-f.is-over small { color: var(--s-mid); font-weight: 600; }
+.pd-f select, .pd-f input[type="text"], .pd-f input[type="date"] { font-size: 14px; padding: 5px 8px; min-width: 0; width: 100%; }
+/* 여러 개 선택 (파이프드라이브 다중 선택과 같은 모양) */
+.ms { position: relative; min-width: 0; }
+.ms-box { width: 100%; min-height: 32px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; text-align: left; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); cursor: pointer; }
+.ms-tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.ms-none { font-size: 13px; color: var(--muted); }
+.ms-pop { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 4px); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(28, 38, 56, .12); padding: 8px; }
+.ms-q { width: 100%; font-size: 13px; padding: 5px 8px; margin-bottom: 6px; }
+.ms-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; }
+.drawer-body label.ms-opt { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); padding: 4px 2px; cursor: pointer; }
 .pd-val { font-weight: 600; }
 .pd-tag { display: inline-block; margin-left: 6px; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 .pd-tag.is-bad { background: #ffeef0; color: var(--s-lo); }

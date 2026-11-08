@@ -171,7 +171,9 @@ async function actionLoad(dealId: number) {
 }
 
 // ---------- save ----------
-async function saveFields(dealId: number, deal: any, input: Record<string, any>, closeDate?: string) {
+// overwrite: 이미 값이 있어도 바꿀 하나짜리 항목 이름
+// setMode 'replace': 여러 개 항목(경쟁사, 사용 포스)은 보낸 목록 그대로 (예전 기록은 기존 값에 더함)
+async function saveFields(dealId: number, deal: any, input: Record<string, any>, closeDate?: string, overwrite: string[] = [], setMode = 'merge') {
   const fields = await dealFields();
   const update: Record<string, any> = {};
   const v2custom: Record<string, any> = {};
@@ -188,15 +190,18 @@ async function saveFields(dealId: number, deal: any, input: Record<string, any>,
       const newIds = opts.filter((o: any) => want.includes(o.label)).map((o: any) => Number(o.id));
       const unknown = want.filter((w) => !opts.some((o: any) => o.label === w));
       if (unknown.length) skipped.push({ name, reason: '목록에 없음: ' + unknown.join(', ') });
-      const ids = Array.from(new Set(idsOf(deal[f.key]).concat(newIds)));
-      if (!newIds.length || ids.length === idsOf(deal[f.key]).length) { if (!unknown.length) skipped.push({ name, reason: '이미 들어 있음' }); continue; }
-      update[f.key] = ids.join(',');
+      const before = idsOf(deal[f.key]);
+      const ids = setMode === 'replace' ? Array.from(new Set(newIds)) : Array.from(new Set(before.concat(newIds)));
+      const same = ids.length === before.length && ids.every((x) => before.includes(x));
+      if (same || (setMode !== 'replace' && !newIds.length)) { if (!unknown.length) skipped.push({ name, reason: '바뀐 것 없음' }); continue; }
+      update[f.key] = ids.length ? ids.join(',') : null;
       v2custom[f.key] = ids;
       changed.push(name);
       continue;
     }
-    // 하나짜리 항목은 비어 있을 때만 채운다
-    if (cur !== '' && cur !== null) { skipped.push({ name, reason: '기존 값 유지: ' + cur }); continue; }
+    // 하나짜리 항목은 비어 있을 때만 채운다 (덮어쓰기로 고른 항목은 바꾼다)
+    if (String(cur) === String(val ?? '').trim()) { skipped.push({ name, reason: '같은 값' }); continue; }
+    if (cur !== '' && cur !== null && !overwrite.includes(name)) { skipped.push({ name, reason: '기존 값 유지: ' + cur }); continue; }
     if (f.field_type === 'enum') {
       const o = opts.find((x: any) => x.label === String(val));
       if (!o) { skipped.push({ name, reason: '목록에 없음: ' + val }); continue; }
@@ -271,7 +276,7 @@ async function actionSave(dealId: number, p: any) {
   const steps: Record<string, any> = {};
   // 단계마다 따로 기록해서, 실패한 단계만 다시 보낼 수 있게
   for (const [name, run] of [
-    ['fields', () => saveFields(dealId, deal, p.fields || {}, p.closeDate)],
+    ['fields', () => saveFields(dealId, deal, p.fields || {}, p.closeDate, Array.isArray(p.overwrite) ? p.overwrite : [], p.setMode === 'replace' ? 'replace' : 'merge')],
     ['today', () => saveToday(dealId, typeKey, p.today)],
     ['next', () => saveNext(dealId, typeKey, p.next)],
   ] as [string, () => Promise<any>][]) {
