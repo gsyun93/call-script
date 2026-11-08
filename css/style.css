@@ -345,6 +345,9 @@ em.done { color: var(--s-hi); background: #e4f6ec; }
 .t-head b { font-size: 25px; flex: 1; min-width: 0; }
 .tile .say { padding-left: 56px; font-size: 20px; }
 .tiles:not(.few) .tile .say { font-size: 17px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* 엔터프라이즈: 멘트가 길어도 다 보이게 (자르지 않음) */
+body.ent .tiles:not(.few) .tile { justify-content: flex-start; }
+body.ent .tiles:not(.few) .tile .say { display: block; -webkit-line-clamp: unset; overflow: visible; line-height: 1.55; }
 .tile.is-done { background: #f3f6f9; box-shadow: 0 0 0 1px rgba(28, 38, 56, .05); }
 .tile.is-done b { color: var(--ink-2); }
 
