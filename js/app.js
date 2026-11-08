@@ -1259,6 +1259,7 @@
     });
     if (D.ent) markTips(box, s, cur);
     if (D.ent) renderStagePanel(s, curId);
+    if (D.ent && objKind() !== lastObjKind) renderObjections();
     $$('[data-fv]', box).forEach(function (inp) {
       inp.addEventListener('input', function () {
         state.vars[inp.dataset.fv] = inp.value;
@@ -1962,10 +1963,19 @@
 
   // ---------- 반론 ----------
   var openObj = {};
+  // 엔터프라이즈: 본사 통화는 본사 반론만, 가맹점 통화는 매장 영업 반론 + 가맹점 반론
+  function objKind() { return state.vars.entKind === '가맹점' ? 'fr' : 'hq'; }
+  function objShown(o) {
+    if (!D.ent) return true;
+    return (o.for || 'fr') === objKind();
+  }
+  var lastObjKind = '';
   function renderObjections() {
+    lastObjKind = D.ent ? objKind() : '';
     var q = ($('#objSearch').value || '').trim().replace(/\s+/g, ' ');
     var terms = q ? q.split(' ') : [];
     var list = D.objections.filter(function (o) {
+      if (!objShown(o)) return false;
       if (!terms.length) return true;
       var hay = (o.title + ' ' + o.keywords + ' ' + o.answers.map(function (a, i) { return objText(o.id, i); }).join(' ')).toLowerCase();
       return terms.every(function (t) { return hay.indexOf(t.toLowerCase()) !== -1; });
